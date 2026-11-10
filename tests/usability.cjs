@@ -1,0 +1,20 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const app=fs.readFileSync('app.js','utf8'),ui=fs.readFileSync('usability.js','utf8');
+const setup=`let items={},pageEntries=[{id:'a',rotation:0}],page=1,history=[],redoStack=[],doc={},rendering=false,pageBusy=false,start=null,working=null,dirty=false,pageChecks=new Set(),selected=-1;let indices=[];const window={invalidateMobileShare(){}};const $=()=>({hidden:true});const render=async()=>{};const refreshPageGrid=async()=>{};const say=()=>{};const syncEditor=()=>{};const draw=()=>{};const cloneObject=o=>JSON.parse(JSON.stringify(o));const list=()=>items[pageEntries[page-1].id]||[];const selectionIndices=()=>indices;const selectedObjects=()=>indices.map(i=>list()[i]);const selectIndices=a=>{indices=a;selected=a[0]??-1};`;
+const move=app.slice(app.indexOf('function moveAnnotation('),app.indexOf('\n',app.indexOf('function moveAnnotation(')));
+const snapshot=app.slice(app.indexOf('function snapshot()'),app.indexOf('function list()'));
+const nudge=ui.slice(ui.indexOf('function nudgeSelected('),ui.indexOf('\nquickBar.querySelectorAll',ui.indexOf('function nudgeSelected(')));
+const ctx=vm.createContext({console,assert});vm.runInContext(setup+move+snapshot+app.slice(app.indexOf('function captureHistoryState()'))+nudge,ctx);
+(async()=>{await vm.runInContext(`(async()=>{
+ items.a=[{type:'text',x:20,y:30,text:'指示'},{type:'pen',x:5,y:6,points:[{x:5,y:6},{x:8,y:9}]}];selectIndices([0,1]);
+ nudgeSelected(1,0);assert.equal(items.a[0].x,21);assert.equal(items.a[1].points[1].x,9);assert.equal(history.length,1);
+ await travelHistory(false);assert.equal(items.a[0].x,20);assert.equal(items.a[1].points[1].x,8);assert.equal(redoStack.length,1);
+ await travelHistory(true);assert.equal(items.a[0].x,21);assert.equal(items.a[1].points[1].x,9);
+ await travelHistory(false);selectIndices([0]);nudgeSelected(0,10);assert.equal(redoStack.length,0);assert.equal(items.a[0].y,40);
+ pageEntries[0].rotation=90;nudgeSelected(1,0);assert.equal(items.a[0].y,39);
+ const before=items.a[0].x;pageBusy=true;nudgeSelected(10,0);assert.equal(items.a[0].x,before);pageBusy=false;
+ snapshot();pageEntries.push({id:'b',rotation:0});items.b=[{type:'rect',x:1,y:2}];page=2;
+ await travelHistory(false);assert.equal(pageEntries.length,1);assert.equal(page,1);
+ await travelHistory(true);assert.equal(pageEntries.length,2);assert.equal(page,2);assert.equal(items.b[0].x,1);
+ for(let i=0;i<65;i++)snapshot();assert.equal(history.length,60);
+ })()`,ctx);console.log('PASS: group movement, pen coordinates, rotation, undo/redo, divergent edit, busy guard, page history and history limit');})().catch(e=>{console.error(e);process.exitCode=1});

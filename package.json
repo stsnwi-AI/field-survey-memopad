@@ -1,0 +1,19 @@
+{
+  "name": "iwasaki-pdf-editor-development",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Development tools only; application release version lives in index.html and sw.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "python3 -m http.server 8000 --bind 127.0.0.1",
+    "check": "node --check app.js && node --check mobile.js && node --check sw.js && node --check tests/smoke.cjs && node --check tests/selection.cjs && node --check tests/multiselect.cjs",
+    "test": "node tests/smoke.cjs",
+    "test:selection": "node tests/selection.cjs",
+    "test:multiselect": "node tests/multiselect.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

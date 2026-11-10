@@ -1,0 +1,132 @@
+/* Survey extension on top of unchanged PDF editing engine. No changes to source app.js. */
+(()=>{'use strict';
+const by=id=>document.getElementById(id);const PREFIX='field-survey-v03';let records={},activeId=null,placing=false,changeSerial=0,db=null;
+const status=msg=>by('surveyStatus').textContent=msg;
+const getPage=()=>typeof pageEntries!=='undefined'&&pageEntries[page-1] ? pageEntries[page-1].id : null;
+const pins=()=>Object.entries(items||{}).flatMap(([pageId,arr])=>(arr||[]).filter(o=>o.surveyId&&o.type==='stamp').map(o=>({pageId,o})));
+// Numbering is scoped to this PDF session's page entries, never the global photo database.
+const scope=()=>by('surveyNumberScope').value;
+const validPages=()=>new Set((pageEntries||[]).map(e=>e.id));
+const documentPins=()=>{const ids=validPages();return pins().filter(p=>ids.has(p.pageId))};
+function numberFor(pageId){
+ const used=documentPins().filter(p=>scope()==='document'||p.pageId===pageId).map(p=>Number(p.o.surveyNumber)).filter(n=>Number.isSafeInteger(n)&&n>0);
+ return used.length?Math.max(...used)+1:1;
+}
+function currentPageNumber(pageId){return (pageEntries||[]).findIndex(e=>e.id===pageId)+1}
+function renumberAll(){
+ // Sequence within each page in original placement order; stable surveyId retains photo associations.
+ const serials=new Map();let changes=0;
+ for(const entry of pageEntries||[]){
+  for(const o of items[entry.id]||[]){if(!o.surveyId||o.type!=='stamp')continue;
+   const key=scope()==='document'?'all':entry.id;
+   const num=(serials.get(key)||0)+1;serials.set(key,num);
+   if(o.surveyNumber!==num||o.text!==String(num)){o.surveyNumber=num;o.text=String(num);changes++}
+  }
+ }
+ return changes;
+}
+function safeName(s){return String(s||'').replace(/[<>]/g,'').slice(0,150)}
+function renderList(){let entries=documentPins().sort((a,b)=>currentPageNumber(a.pageId)-currentPageNumber(b.pageId)||Number(a.o.surveyNumber)-Number(b.o.surveyNumber));let box=by('surveyPinList');box.textContent='';for(const {pageId,o} of entries){let b=document.createElement('button');b.type='button';b.className='survey-record'+(activeId===o.surveyId?' active':'');const r=records[o.surveyId]||{};b.textContent=`${scope()==='page'?'P'+currentPageNumber(pageId)+' / ':''}No.${String(o.surveyNumber).padStart(3,'0')}　${safeName((r.memo||'').split('\n')[0]||'調査記録')}　(${(r.photos||[]).length}枚)`;b.onclick=()=>openRecord(o.surveyId,pageId);box.append(b)} }
+const surveyDialog=by('surveyDialog');
+function showSurveyDialog(){if(!surveyDialog.open)surveyDialog.showModal()}
+function hideSurveyDialog(){if(surveyDialog.open)surveyDialog.close()}
+surveyDialog.addEventListener('close',()=>{activeId=null;renderList()});
+by('surveyDialogX').onclick=()=>hideSurveyDialog();
+surveyDialog.addEventListener('click',e=>{if(e.target===surveyDialog)hideSurveyDialog()});
+// Double click directly on an existing survey stamp opens its photo/comment dialog.
+// Capture phase preempts the original text-editor double click handler for survey pins only.
+canvas.addEventListener('dblclick',e=>{
+ if(!doc||rendering||pageBusy||e.button>0)return;
+ const p=point(e);
+ const i=[...list().keys()].reverse().find(i=>list()[i]?.surveyId && hitAnnotation(list()[i],p));
+ if(i===undefined)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ // Left double-click always edits an existing pin, even while continuous placement is ON.
+ setTool('select',false);selectIndices([i]);syncEditor();draw();openRecord(list()[i].surveyId,getPage());
+},true);
+// Two deliberate taps on a pin also open the dialog on touch devices.
+let recentTap=null;
+canvas.addEventListener('pointerup',e=>{
+ if(e.pointerType!=='touch'||placing||!doc||rendering||pageBusy||!e.isPrimary)return;
+ const p=point(e),idx=[...list().keys()].reverse().find(i=>list()[i]?.surveyId&&hitAnnotation(list()[i],p));
+ if(idx===undefined){recentTap=null;return}
+ const pin=list()[idx],now=Date.now();
+ if(recentTap&&recentTap.id===pin.surveyId&&now-recentTap.time<440&&Math.hypot(p.x-recentTap.x,p.y-recentTap.y)<16){
+  recentTap=null;openRecord(pin.surveyId,getPage());
+ }else recentTap={id:pin.surveyId,time:now,x:p.x,y:p.y};
+},true);
+function openRecord(id,pg){const found=documentPins().find(v=>v.o.surveyId===id);if(!found){status('番号ピンがありません');return}activeId=id;records[id] ||= {memo:'',instruction:'',photos:[]};const r=records[id];showSurveyDialog();by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0');by('surveyMemo').value=r.memo||'';by('surveyInstruction').value=r.instruction||'';renderPhotos();renderList(); if(pg!==getPage()){status('記録を表示しました。該当図面へはPDF編集のページ切替で移動してください。')}else status('調査記録を編集中');}
+function renderPhotos(){const b=by('surveyThumbnails');b.textContent='';if(!activeId)return;const r=records[activeId];(r?.photos||[]).forEach((photo,i)=>{const w=document.createElement('div');w.className='survey-photo';const im=document.createElement('img');im.src=photo.data;im.alt='調査写真 '+(i+1);const del=document.createElement('button');del.textContent='写真を削除';del.onclick=()=>{if(!confirm('この写真を削除しますか？'))return;r.photos.splice(i,1);queueSave();renderPhotos();renderList()};w.append(im,del);b.append(w)})}
+function markPin(x,y){if(!doc||!getPage()||rendering||pageBusy){status('先にPDF図面を開いてください');return}const id=crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);const n=numberFor(getPage());snapshot();const o={type:'stamp',x:x-12,y:y-12,w:24,h:24,shape:'circle',text:String(n),color:'#d12c40',surveyId:id,surveyNumber:n};list().push(o);records[id]={memo:'',instruction:'',photos:[]};setTool('select',false);selectIndices([list().length-1]);draw();queueSave();renderList();status('調査番号 No.'+String(n).padStart(3,'0')+' を追加しました。PDF保存時には番号印も図面に出力されます。')}
+// Right-click (mouse) / one-finger tap (touch) while placement mode is active.
+// Continuous mode keeps placement enabled; other editing interactions stay unchanged when it is OFF.
+let lastTouchPlacement=0;
+function setPlace(v){
+ placing=!!v;
+ const btn=by('surveyPinMode');btn.setAttribute('aria-pressed',String(placing));
+ btn.textContent='調査番号を配置：'+(placing?'ON':'OFF');
+ canvas.style.cursor=placing?'crosshair':(tool==='select'?'default':'crosshair');
+ status(placing?'PCは空いている図面を右クリックして番号配置、既存番号を左ダブルクリックで記録編集。スマホは図面を1本指でタップしてください。'+(by('surveyContinuous').checked?'連続採番中です。':'1件配置すると終了します。'):'番号配置を終了しました。通常のPDF編集操作に戻りました。');
+}
+function placeFromEvent(e){
+ if(!placing||!doc||rendering||pageBusy)return false;
+ const rect=canvas.getBoundingClientRect();
+ if(rect.width===0||rect.height===0||e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return false;
+ e.preventDefault();e.stopImmediatePropagation();
+ const p=point(e);
+ if(!Number.isFinite(p.x)||!Number.isFinite(p.y))return false;
+ // A right-click on an existing survey pin must never create an overlapping number.
+ if(e.type==='contextmenu' && list().some(o=>o.surveyId && hitAnnotation(o,p))){
+  status('既存の番号は左ダブルクリックで写真・コメントを編集してください。');return true;
+ }
+ // Always advance only through markPin's normal validated construction path.
+ markPin(p.x,p.y);
+ if(!by('surveyContinuous').checked)setPlace(false);
+ else{canvas.style.cursor='crosshair';status('番号を配置しました。続けて配置できます。');}
+ return true;
+}
+// Register capture listeners before the original PDF editor's context menu handler.
+canvas.addEventListener('contextmenu',e=>{
+ if(!placing)return;
+ // Android long press after a touch must not create a second pin.
+ if(Date.now()-lastTouchPlacement<900){e.preventDefault();e.stopImmediatePropagation();return;}
+ placeFromEvent(e);
+},true);
+canvas.addEventListener('pointerdown',e=>{
+ if(!placing)return;
+ if(e.pointerType==='touch'&&e.isPrimary&&e.button===0){
+  if(placeFromEvent(e))lastTouchPlacement=Date.now();
+ }else if(e.pointerType==='pen'&&e.button===0){
+  placeFromEvent(e);
+ }
+ // Mouse left click keeps standard editing behavior. Right click is handled by contextmenu.
+},true);
+by('surveyPinMode').onclick=()=>setPlace(!placing);
+by('surveyNumberScope').onchange=()=>{
+ const existing=documentPins();
+ if(existing.length){
+  if(!confirm('採番方式を変更すると、現在開いているPDFの番号をページ順に振り直します。写真・メモとの紐付けは維持しますが、配布済み図面の番号と異なる可能性があります。続行しますか？')){
+   by('surveyNumberScope').value=scope()==='document'?'page':'document';return;
+  }
+  snapshot();const changed=renumberAll();draw();queueSave();
+  status('採番方式を変更し、'+changed+'件の番号表示を更新しました。編集済みPDFを保存してください。');
+ }else status('採番方式を変更しました。次の番号は001から開始します。');
+ renderList();if(activeId){const found=documentPins().find(v=>v.o.surveyId===activeId);if(found)by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0')}
+};
+by('surveyContinuous').onchange=()=>{if(placing)setPlace(true)};
+by('surveyOpenSelected').onclick=()=>{const o=typeof selected==='number'?list()[selected]:null;if(o?.surveyId)openRecord(o.surveyId,getPage());else status('PDF編集の「選択・移動・削除」で調査番号を選択してください。')};
+by('surveyClose').onclick=()=>hideSurveyDialog();
+for(const [id,key] of [['surveyMemo','memo'],['surveyInstruction','instruction']])by(id).addEventListener('input',()=>{if(!activeId||!records[activeId])return;records[activeId][key]=by(id).value;queueSave();renderList()});
+async function photos(e){if(!activeId){status('先に番号を選択してください');return}const r=records[activeId];if(!r)return;for(const f of [...e.target.files]){if(!f.type.startsWith('image/'))continue;if(f.size>15*1024*1024){status('15MBを超える写真は追加できません');continue}const data=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(f)});r.photos.push({name:safeName(f.name),data})}e.target.value='';renderPhotos();renderList();queueSave()}
+by('surveyCamera').onchange=photos;by('surveyPhotos').onchange=photos;
+function queueSave(){clearTimeout(changeSerial);changeSerial=setTimeout(save,450)}
+function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PREFIX,1);req.onupgradeneeded=()=>req.result.createObjectStore('survey');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function save(){try{db ||=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction('survey','readwrite');tx.objectStore('survey').put({records},'latest');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});status('写真・メモをこの端末に保存しました（図面・番号印はPDF保存も行ってください）。')}catch(err){console.warn(err);status('端末保存に失敗しました。写真・メモのバックアップを作成してください。')}}
+async function load(){try{db=await openDb();const data=await new Promise((resolve,reject)=>{const tx=db.transaction('survey','readonly');const req=tx.objectStore('survey').get('latest');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});if(data){records=data.records||{}}renderList()}catch(e){status('保存データを読み込めませんでした。バックアップから復元してください。')}}
+function download(data,name){const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),4000)}
+by('surveyExport').onclick=()=>{download({type:PREFIX,version:1,exportedAt:new Date().toISOString(),records},'現場調査_写真メモ_'+new Date().toISOString().slice(0,10)+'.json');status('写真・メモをバックアップしました。図面・番号印の保存はPDF編集の保存ボタンを使用してください。')};
+by('surveyImport').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.type!==PREFIX||!d.records||typeof d.records!=='object')throw Error('形式が異なります');if(!confirm('現在の写真・メモ記録を読み込みデータで置き換えますか？'))return;records=d.records;activeId=null;hideSurveyDialog();await save();renderList();status('写真・メモを読み込みました。対応するPDF（番号印つき）も別途開いてください。')}catch(err){status('バックアップ形式を確認してください：'+err.message)}finally{e.target.value=''}};
+// Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
+setInterval(()=>{const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
+load();
+})();

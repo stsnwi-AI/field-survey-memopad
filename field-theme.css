@@ -1,0 +1,109 @@
+/* Field Survey v0.9 — construction site visual theme.
+   Visual-only overrides. Source controls, element ids and behavior stay intact. */
+:root{
+ --ink:#172b3b;--muted:#526777;--purple:#17485d;--lavender:#e5eef1;
+ --coral:#ee953a;--line:#c9d5dc;--cream:#eef3f5;
+ --shadow:0 5px 18px #10283b15;
+ --field-navy:#102b3b;--field-orange:#ee902e;--field-yellow:#ffcc45;
+}
+body{background:#eef3f5;color:var(--ink)}
+button,label.open,select{border-radius:6px;border-color:#c7d3da;color:var(--ink)}
+button:hover,label.open:hover{background:#e9f3f6;box-shadow:0 2px 8px #1c435019;transform:none}
+button:focus-visible,label.open:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #ed9b38;outline-offset:2px}
+.primary,#sample{background:#d97d20;border-color:#d97d20;color:#fff;box-shadow:none;font-weight:750}
+.primary:hover,#sample:hover{background:#b96614;color:#fff}
+label.open{background:#fff0d7;border-color:#edbc73;color:#613d12}
+header{min-height:74px;padding:10px 21px;background:#102b3b;border-bottom:4px solid #e89a2c;gap:9px}
+header button{background:#f6f8f9;color:#1b3545;border-color:#d2dee2}
+header button.primary{background:#e99830;border-color:#e99830;color:#1d2832}
+header .brand{gap:10px}header .brand>span:last-child{color:#fff;font-size:20px;letter-spacing:.025em}
+header .brand small{color:#b8ced7;font-size:10px;letter-spacing:1.1px}
+.brand-mark{background:#173e51;border:1px solid #386578;border-left:4px solid #f1aa39;border-radius:5px;transform:none;width:45px;height:45px}
+.brand-mark .ui-icon{color:#ffbc58}
+main>aside{background:#f8fbfc;border-right:1px solid #c1d0d8;box-shadow:3px 0 10px #1938490c}
+h2{color:#183b4c;letter-spacing:.04em}h3{color:#455e6e}.section-dot{background:#ee932a}
+#togglePages{background:#e6f0f4;border-color:#b9cfdc;color:#18475f}
+#tools button{border-color:#cbd9df!important;color:#244557;background:#fff}
+#tools .ui-icon,#tools [data-tool] .ui-icon{background:#e6eff3;color:#22526b;border-radius:4px}
+#tools button.active{background:#fff1d9!important;border-color:#eaa342!important;color:#6a4318!important;box-shadow:inset 0 0 0 1px #eaa342}
+#tools button.active::after{background:#e38518}
+#surveyToolDock{background:#e6edf1;border-bottom:1px solid #b4c6d0;border-top:1px solid #fff;padding:6px 11px;box-shadow:0 2px 8px #193c4e19}
+#surveyToolDock .dock-title{color:#173e53;font-weight:800;letter-spacing:.055em}
+#surveyToolDock .dock-title::before{content:'●';font-size:9px;color:#e98a20;margin-right:6px}
+#surveyToolDock #tools button{border-radius:5px;min-height:40px}
+#surveyToolDock .dock-mode{color:#1e4a5e;background:#fff;border-color:#aebfc8;font-weight:700}
+#surveyToolDock .dock-grip{color:#18475e}
+#surveyToolDock.dock-floating{border:2px solid #315569;border-top:6px solid #e69b32;border-radius:7px;background:#e9f1f3;box-shadow:0 12px 38px #0b1c2d55}
+.survey-section{background:#f4f8f9;border:1px solid #c1d0d9;border-top:4px solid #ec9b32;border-radius:6px;color:#213e4c;box-shadow:0 2px 8px #2041540a}
+.survey-section h2{color:#1a465b;font-weight:800}
+.survey-section h2::before{content:'▣';font-size:15px;color:#da7f16;margin-right:3px}
+.survey-section button,.survey-import{background:#fff;border:1px solid #b1c6d0;color:#1c4456;border-radius:5px;font-weight:650}
+.survey-section button[aria-pressed="true"]{background:#df8120!important;border-color:#a75a13!important;color:#fff!important}
+.survey-section button:focus-visible{outline-color:#e9a238}
+.survey-scope select{background:#fff;border:1px solid #afc3ce;color:#193f53;border-radius:5px}
+.survey-continuous input{accent-color:#db8020}
+.survey-record{border-color:#d0dce2!important}
+.survey-record.active{outline-color:#df8c25}
+.survey-extras>summary{color:#25536a}
+.survey-dialog{border:1px solid #688293;border-top:6px solid #e99a2e;border-radius:8px;background:#f9fbfc;color:#1b3847;box-shadow:0 20px 58px #0b1e2c77}
+.survey-dialog::backdrop{background:#102735a3}
+.survey-dialog-top{background:#163a4d;color:#fff;border-bottom:2px solid #e7a23d}
+.survey-dialog-top button{color:#173a4c;background:#fff}
+#surveyDetail h3{color:#1b4153}
+#surveyDetail textarea,textarea{background:#fff;color:#173646;border-color:#b9cbd4;border-radius:5px}
+#surveyDetail .survey-import{background:#fff3e3;border-color:#e8b577;color:#68421d}
+#surveyThumbnails .survey-photo{border-color:#b8cbd5;border-radius:5px}
+.workspace{background-color:#e8eef1;background-image:linear-gradient(#cbd7de45 1px,transparent 1px),linear-gradient(90deg,#cbd7de45 1px,transparent 1px);background-size:22px 22px}
+.bar{background:#f8fbfc;border-bottom:1px solid #c5d2da}
+#status{background:#ebf3f5;border-color:#cbdce4;color:#24536b}
+#paper{background:#fff;box-shadow:0 3px 14px #102c3f35}
+#pagePanel{background:#fbfdfe;border:1px solid #b8ccd6;border-radius:8px}
+.page-panel-head h2{color:#1c4b61}
+.page-card{background:#f9fbfc;border-color:#c4d3dc;border-radius:6px}
+.page-card.current,.page-card.checked{border-color:#dc8524;background:#fff3e0}
+.page-card.drag-over{outline-color:#e39734}
+.page-card input{accent-color:#e18a22}
+#pageSelection{background:#e8f0f3;color:#2f5a6e!important}
+#editor{background:#eef5f6;border-color:#bcd0d7;border-radius:6px}
+#editor b{color:#224f63}
+#empty{margin-top:28px;padding-top:14px}
+#empty .hero-art{width:min(430px,90%);margin-bottom:12px}
+#empty h1{color:#183e50;font-size:clamp(23px,2.6vw,32px);letter-spacing:.04em}
+#empty p{color:#486070}
+.welcome-chip{background:#173f52;border-color:#173f52;color:#fff;border-radius:4px;padding:7px 12px;letter-spacing:.08em}
+.welcome-chip .ui-icon{color:#ffb94e}
+.welcome-features span{border-radius:5px;border-color:#bfcfd8;background:#fafdff;color:#28556b}
+#sample{border-radius:5px}
+.note{background:#edf2f4;border:1px solid #cfdae0;border-radius:5px;color:#465d6b}
+.swatch.active{outline-color:#e18a28}
+#lineStyleDialog h2{background:#dfebef;color:#1b4458;border-bottom-color:#b7cad3}
+#objectMenu{border-color:#b7cbd3}
+@media(max-width:750px){
+ header{padding:10px 12px;min-height:65px}
+ header .brand>span:last-child{font-size:17px}
+ #surveyToolDock{background:#eaf1f4}
+ #surveyToolDock.dock-floating{width:min(210px,calc(100vw - 16px))}
+ .survey-dialog{max-height:90dvh}
+}
+
+/* v1.0: unused top editing row collapsed by default; reversible using the header button. */
+#surveyToolDock.dock-collapsed{display:none!important}
+#showSurveyTools{background:#264759;border:1px solid #537282;color:#fff;border-radius:5px;padding:7px 10px;font-weight:700;white-space:nowrap}
+#showSurveyTools[aria-expanded="true"]{border-color:#e59a19;color:#ffd28b}
+
+/* Ver.1.1: upper PDF write controls visible; secondary mobile move/edit row
+   relocated to a closed, optional menu without removing its event handlers. */
+#surveyToolDock:not(.dock-floating){display:flex}
+#mobileMoreActions{display:none}
+@media(max-width:1024px), (pointer:coarse){
+  #mobileMoreActions{display:block;position:relative;flex:0 0 auto}
+  #mobileMoreActions>summary{cursor:pointer;list-style:none;min-height:38px;display:flex;align-items:center;padding:6px 10px;background:#fff;border:1px solid #b4c6d0;border-radius:5px;font-size:12px;font-weight:700;color:#173e53}
+  #mobileMoreActions>summary::-webkit-details-marker{display:none}
+  #mobileMoreActions[open]>#mobileToolbar{display:flex!important;position:absolute;top:calc(100% + 7px);right:0;width:min(440px,calc(100vw - 20px));max-height:65dvh;overflow:auto;z-index:30;box-shadow:0 10px 25px #102b3b38;border:1px solid #b4c6d0;border-radius:7px;padding:10px}
+  #mobileMoreActions:not([open])>#mobileToolbar{display:none!important}
+}
+@media(max-width:750px){
+  #surveyToolDock .dock-tools,body:not(.mobile-tools-open) #surveyToolDock .dock-tools{display:block!important;flex:1 1 100%}
+  #surveyToolDock .dock-title{flex:1 0 auto}
+  #mobileMoreActions{order:2}
+}

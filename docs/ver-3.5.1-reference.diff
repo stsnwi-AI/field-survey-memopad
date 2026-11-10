@@ -1,0 +1,114 @@
+--- main/index.html
++++ Ver.3.5.1/index.html
+@@ -3,7 +3,7 @@
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <title>かんたんPDF編集</title>
+-<link rel="stylesheet" href="style.css?v=3.5.0">
++<link rel="stylesheet" href="style.css?v=3.5.1">
+ <link rel="manifest" href="manifest.webmanifest">
+ <meta name="theme-color" content="#705398">
+ <meta name="apple-mobile-web-app-capable" content="yes">
+@@ -18,7 +18,7 @@
+ <path d="M14 3v5h5M9 14h6M9 17h4"/>
+ </svg>
+ </span>
+-<span>かんたんPDF編集<small>PDF WORKSPACE · Ver.3.5.0</small>
++<span>かんたんPDF編集<small>PDF WORKSPACE · Ver.3.5.1</small>
+ </span>
+ </div>
+ <label class="open" tabindex="0" role="button" aria-label="PDFを開く">
+@@ -355,7 +355,7 @@
+ <button id="touchCopy">コピー</button>
+ <button id="touchDuplicate">複製</button>
+ <button id="touchPaste">貼り付け</button>
+-<button id="touchDelete">削除</button>
++<button id="touchDelete" disabled>選択した1件を削除…</button>
+ </div>
+ <div id="paper">
+ <canvas id="base">
+@@ -393,9 +393,19 @@
+ </script>
+ <script src="vendor/cmaps.js">
+ </script>
+-<script src="app.js?v=3.5.0">
++<script src="app.js?v=3.5.1">
+ </script>
+-<script src="mobile.js?v=3.5.0">
++<dialog id="touchDeleteDialog" aria-labelledby="touchDeleteTitle">
++<h2 id="touchDeleteTitle">選択した1件を削除しますか？</h2>
++<p id="touchDeleteDescription">
++</p>
++<p>削除するのは、このオブジェクト1件だけです。</p>
++<div class="touch-delete-controls">
++<button id="cancelTouchDelete" autofocus>やめる</button>
++<button id="confirmTouchDelete">この1件を削除</button>
++</div>
++</dialog>
++<script src="mobile.js?v=3.5.1">
+ </script>
+ </body>
+ </html>
+--- main/mobile.js
++++ Ver.3.5.1/mobile.js
+@@ -1,18 +1,18 @@
+ /* Mobile layer for the verified 3.4.10 editor; source PDFs and project schema are unchanged. */
+ const mobileWorkspace=document.querySelector('.workspace');
+ const mobileMedia=window.matchMedia('(max-width:1024px), (pointer:coarse)');
+-let touchMode='browse',preparedMobileFile=null,deferredInstall=null;
++let touchMode='browse',preparedMobileFile=null,deferredInstall=null,pendingTouchDelete=null;
+ window.mobileFitMode=mobileMedia.matches;
+ window.setPDFZoom=value=>{const z=Math.round(Math.max(.15,Math.min(3,value))*1000)/1000;let option=[...$('zoom').options].find(o=>Number(o.value)===z);if(!option){option=document.createElement('option');option.value=String(z);option.textContent=Math.round(z*100)+'%';option.dataset.touchZoom='true';for(const old of [...$('zoom').options])if(old.dataset.touchZoom)$('zoom').removeChild(old);$('zoom').append(option)}$('zoom').value=option.value;return z};
+-function setTouchMode(mode,announce=true){touchMode=mode;document.body.dataset.touchMode=mode;for(const [id,active]of [['browseTouch',mode==='browse'],['editTouch',mode==='edit']]){$(id).classList.toggle('active',active);$(id).setAttribute('aria-pressed',String(active))}if(announce)say(mode==='browse'?'1本指で表示を移動、2本指で拡大縮小できます。':'ツールを選び、PDF上をタッチして書き込んでください。2本指は拡大縮小です。')}
++function setTouchMode(mode,announce=true){touchMode=mode;if(mode==='browse'&&doc){selected=-1;draw()}document.body.dataset.touchMode=mode;for(const [id,active]of [['browseTouch',mode==='browse'],['editTouch',mode==='edit']]){$(id).classList.toggle('active',active);$(id).setAttribute('aria-pressed',String(active))}window.updateTouchSelection?.();if(announce)say(mode==='browse'?'1本指で表示を移動、2本指で拡大縮小できます。':'ツールを選び、PDF上をタッチして書き込んでください。2本指は拡大縮小です。')}
+ $('browseTouch').onclick=()=>setTouchMode('browse');$('editTouch').onclick=()=>setTouchMode('edit');
+ $('mobileToolsToggle').onclick=()=>{const expanded=!document.body.classList.contains('mobile-tools-open');document.body.classList.toggle('mobile-tools-open',expanded);$('mobileToolsToggle').setAttribute('aria-expanded',String(expanded));$('mobileToolsToggle').textContent=expanded?'ツールを閉じる':'ツールを表示'};
+ $('fitPage').onclick=async()=>{if(rendering||pageBusy)return;window.mobileFitMode=true;await render()};
+ $('zoom').addEventListener('change',()=>{window.mobileFitMode=false});
+ const desktopSetTool=setTool;setTool=function(t){desktopSetTool(t);if(mobileMedia.matches)setTouchMode('edit',false)};
+ // Larger touch targets and explicit object actions replace right-click on mobile.
+-window.updateTouchSelection=()=>{const o=doc?list()[selected]:null;const active=Boolean(o);$('touchObjectActions').hidden=!doc;$('touchSelectionLabel').textContent=active?(o.type==='image'?'画像を選択中':o.type==='text'?'文字を選択中':'書き込みを選択中'):'書き込みを選ぶと修正できます';for(const id of ['touchCopy','touchDuplicate','touchDelete'])$(id).disabled=!active;$('touchEditText').hidden=o?.type!=='text';$('touchPaste').disabled=!readObjectClipboard();$('prepareShare').disabled=!doc||pageBusy};
+-$('touchCopy').onclick=()=>{copySelectedObject();window.updateTouchSelection()};$('touchDuplicate').onclick=()=>pasteCopiedObject(null,true);$('touchPaste').onclick=()=>{if(!doc)return;const e=pageEntries[page-1];pasteCopiedObject(unturnPoint({x:Math.min(e.rotation%180?e.h:e.w,150),y:Math.min(e.rotation%180?e.w:e.h,150)},e))};$('touchDelete').onclick=()=>$('delete').click();$('touchEditText').onclick=()=>{if(list()[selected]?.type!=='text')return;document.body.classList.add('mobile-tools-open');$('mobileToolsToggle').setAttribute('aria-expanded','true');$('mobileToolsToggle').textContent='ツールを閉じる';syncEditor();$('editText').focus();$('editText').scrollIntoView({block:'center',behavior:'smooth'})};
++window.updateTouchSelection=()=>{const o=doc?list()[selected]:null;const active=Boolean(o);$('touchObjectActions').hidden=!doc;$('touchSelectionLabel').textContent=active?(o.type==='image'?'画像を選択中':o.type==='text'?'文字を選択中':'書き込みを選択中'):'書き込みを選ぶと修正できます';for(const id of ['touchCopy','touchDuplicate','touchDelete'])$(id).disabled=!active;$('touchEditText').hidden=o?.type!=='text';$('touchPaste').disabled=!readObjectClipboard();$('prepareShare').disabled=!doc||pageBusy;const deletable=active&&touchMode==='edit'&&tool==='select'&&!pageBusy&&!rendering&&!pendingTouchDelete;$('touchDelete').disabled=!deletable;$('touchDelete').classList.toggle('delete-ready',deletable);$('touchDelete').textContent=deletable?'選択した1件を削除…':'削除OFF（対象未選択）';if(touchMode==='browse')$('touchSelectionLabel').textContent='見る・動かす：削除OFF';};
++$('touchCopy').onclick=()=>{copySelectedObject();window.updateTouchSelection()};$('touchDuplicate').onclick=()=>pasteCopiedObject(null,true);$('touchPaste').onclick=()=>{if(!doc)return;const e=pageEntries[page-1];pasteCopiedObject(unturnPoint({x:Math.min(e.rotation%180?e.h:e.w,150),y:Math.min(e.rotation%180?e.w:e.h,150)},e))};$('touchDelete').onclick=()=>requestTouchDelete();$('touchEditText').onclick=()=>{if(list()[selected]?.type!=='text')return;document.body.classList.add('mobile-tools-open');$('mobileToolsToggle').setAttribute('aria-expanded','true');$('mobileToolsToggle').textContent='ツールを閉じる';syncEditor();$('editText').focus();$('editText').scrollIntoView({block:'center',behavior:'smooth'})};
+ if(objectClipboardChannel){const baseReceive=objectClipboardChannel.onmessage;objectClipboardChannel.onmessage=e=>{baseReceive?.(e);window.updateTouchSelection()}};
+ // Two-finger gestures roll back an in-progress single-finger edit before zooming.
+ const originalTouchHandlers={down:canvas.onpointerdown,move:canvas.onpointermove,up:canvas.onpointerup,cancel:canvas.onpointercancel};
+@@ -21,7 +21,7 @@
+ function beginPinch(){const ps=[...touchPointers.values()];if(ps.length<2)return;restoreTouchCheckpoint();const center={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};const paper=canvas.getBoundingClientRect();gesture={distance:Math.max(1,Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y)),scale,center,anchorX:(center.x-paper.left)/scale,anchorY:(center.y-paper.top)/scale};touchConsumed=true}
+ let queuedZoom=null,zoomLoopRunning=false;
+ async function requestTouchZoom(z,anchor){queuedZoom={z,anchor};if(zoomLoopRunning)return;zoomLoopRunning=true;try{while(queuedZoom){const req=queuedZoom;queuedZoom=null;if(pageBusy)continue;if(rendering){queuedZoom=req;await new Promise(r=>setTimeout(r,20));continue}window.mobileFitMode=false;window.setPDFZoom(req.z);await render();if(req.anchor){const paper=canvas.getBoundingClientRect();mobileWorkspace.scrollLeft+=paper.left+req.anchor.anchorX*scale-req.anchor.center.x;mobileWorkspace.scrollTop+=paper.top+req.anchor.anchorY*scale-req.anchor.center.y}}}catch(e){say('表示倍率を変更できませんでした：'+e.message)}finally{zoomLoopRunning=false}}
+-canvas.onpointerdown=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.down(e);if(!doc||pageBusy)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;if(touchMode==='browse'){gesture={pan:true,x:e.clientX,y:e.clientY,left:mobileWorkspace.scrollLeft,top:mobileWorkspace.scrollTop};return}touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,dirty,selected};originalTouchHandlers.down(e)};
++canvas.onpointerdown=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.down(e);if(!doc||pageBusy||pendingTouchDelete)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;if(touchMode==='browse'){gesture={pan:true,x:e.clientX,y:e.clientY,left:mobileWorkspace.scrollLeft,top:mobileWorkspace.scrollTop};return}touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,dirty,selected};originalTouchHandlers.down(e)};
+ canvas.onpointermove=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.move(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2&&gesture?.distance){const ps=[...touchPointers.values()],distance=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);requestTouchZoom(gesture.scale*distance/gesture.distance,gesture);return}if(touchConsumed)return;if(gesture?.pan){mobileWorkspace.scrollLeft=gesture.left+gesture.x-e.clientX;mobileWorkspace.scrollTop=gesture.top+gesture.y-e.clientY;return}originalTouchHandlers.move(e)};
+ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?originalTouchHandlers.cancel:originalTouchHandlers.up)(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();if(cancelled)restoreTouchCheckpoint();else if(!touchConsumed&&touchMode==='edit')originalTouchHandlers.up(e);touchPointers.delete(e.pointerId);if(!touchPointers.size){touchCheckpoint=null;touchConsumed=false;gesture=null}else touchConsumed=true;window.updateTouchSelection()}
+ canvas.onpointerup=e=>endTouch(e,false);canvas.onpointercancel=e=>endTouch(e,true);
+@@ -35,3 +35,12 @@
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('installPDFApp').hidden=false});$('installPDFApp').onclick=async()=>{if(!deferredInstall)return;await deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('installPDFApp').hidden=true};window.addEventListener('appinstalled',()=>{$('installPDFApp').hidden=true});
+ if('serviceWorker' in navigator&&window.location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Offline setup unavailable',e));
+ setTouchMode('browse',false);window.updateTouchSelection();
++
++// Mobile deletion is an explicit, confirmed, one-object action, never a drawing mode.
++function requestTouchDelete(){if(!doc||pageBusy||rendering||pendingTouchDelete)return;const o=list()[selected];if(!o||touchMode!=='edit'||tool!=='select'){say('「選択・移動」で対象を選ぶと、削除ボタンが有効になります。');return}pendingTouchDelete={id:pageEntries[page-1].id,object:o};const typeName={text:'文字',image:'画像',pen:'手書き線',arrow:'矢印',rect:'四角',ellipse:'円',highlight:'マーカー'}[o.type]||'書き込み';$('touchDeleteDescription').textContent=o.type==='text'?typeName+'：「'+o.text.slice(0,60)+'」':typeName+'を1件削除します。';$('touchDeleteDialog').showModal();$('cancelTouchDelete').focus();window.updateTouchSelection()}
++function cancelTouchDelete(){pendingTouchDelete=null;$('touchDeleteDialog').close();window.updateTouchSelection()}
++$('cancelTouchDelete').onclick=cancelTouchDelete;
++$('touchDeleteDialog').addEventListener('cancel',e=>{e.preventDefault();cancelTouchDelete()});
++$('confirmTouchDelete').onclick=()=>{const target=pendingTouchDelete;pendingTouchDelete=null;$('touchDeleteDialog').close();if(!target||pageBusy||rendering||pageEntries[page-1]?.id!==target.id){window.updateTouchSelection();return}const index=list().indexOf(target.object);if(index<0){say('選択が変わったため削除しませんでした。');window.updateTouchSelection();return}snapshot();list().splice(index,1);selected=-1;working=start=dragHandle=null;setTouchMode('browse',false);draw();say('1件を削除しました。削除はOFFです。「元に戻す」で復元できます。')};
++const desktopDeleteObject=$('delete').onclick;$('delete').onclick=()=>mobileMedia.matches?requestTouchDelete():desktopDeleteObject();
++const desktopContextDelete=$('removeObject').onclick;$('removeObject').onclick=()=>{if(mobileMedia.matches){hideObjectMenu();requestTouchDelete()}else desktopContextDelete()};
+--- main/style.css
++++ Ver.3.5.1/style.css
+@@ -17,3 +17,5 @@
+ @media(min-width:751px) and (max-width:1024px){#tools{flex-wrap:wrap}.mobile-tools-open #tools button{min-width:105px}#pageGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.workspace{max-height:80dvh}.palette{display:inline-grid}.settings{display:inline-flex}}
+
+ @media(pointer:coarse) and (min-width:1025px){#mobileToolbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px;background:#fffaf4;border-bottom:1px solid #e5dfea}#mobileToolbar button{min-height:44px}#mobileToolbar .active{background:#705398;color:#fff}#mobileHelp{width:100%}#touchObjectActions:not([hidden]){display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;margin:8px 24px;background:#fffdfb;border:1px solid #dac9ef;border-radius:12px}#touchObjectActions button{min-height:44px}#touchSelectionLabel{width:100%;font-size:12px}.workspace{max-height:80dvh;overflow:auto}#overlay{-webkit-touch-callout:none}.page-actions button,.page-move button{min-height:44px}}
++
++#touchDelete:disabled{opacity:1;color:#8a8293;background:#eeeaf0;border:1px solid #d7d0de;box-shadow:none}#touchDelete.delete-ready{color:#a04359;background:#ffe9ef;border:2px solid #d798a8;font-weight:700}#touchDeleteDialog{width:min(90vw,430px);padding:24px;border:1px solid #dcc8ec;border-radius:18px;color:#40364f;background:#fffdfb;box-shadow:0 15px 50px #40304f30}#touchDeleteDialog::backdrop{background:#35283b77}#touchDeleteDialog h2{font-size:18px;line-height:1.6;display:block;margin-bottom:14px}#touchDeleteDialog p{font-size:14px;line-height:1.8;overflow-wrap:anywhere}.touch-delete-controls{display:flex;gap:12px;margin-top:22px}.touch-delete-controls button{flex:1;min-height:48px;font-size:14px}#confirmTouchDelete{background:#aa5168;color:white;border-color:#aa5168;font-weight:700}
+--- main/sw.js
++++ Ver.3.5.1/sw.js
+@@ -1,4 +1,4 @@
+-const APP_CACHE='pdf-memo-v3.5.0';
++const APP_CACHE='pdf-memo-v3.5.1';
+ const APP_FILES=["./", "index.html", "style.css", "app.js", "mobile.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "vendor/pdfjs-LICENSE.txt", "vendor/pdf-lib-LICENSE.txt", "vendor/pdf.worker.min.js", "vendor/cmaps.js", "vendor/pdf-lib.min.js", "vendor/pdf.min.js", "vendor/standard_fonts/LICENSE_FOXIT", "vendor/standard_fonts/FoxitFixed.pfb", "vendor/standard_fonts/FoxitFixedBoldItalic.pfb", "vendor/standard_fonts/FoxitDingbats.pfb", "vendor/standard_fonts/FoxitSerif.pfb", "vendor/standard_fonts/LiberationSans-Bold.ttf", "vendor/standard_fonts/FoxitFixedItalic.pfb", "vendor/standard_fonts/LICENSE_LIBERATION", "vendor/standard_fonts/FoxitFixedBold.pfb", "vendor/standard_fonts/LiberationSans-BoldItalic.ttf", "vendor/standard_fonts/LiberationSans-Italic.ttf", "vendor/standard_fonts/FoxitSerifBoldItalic.pfb", "vendor/standard_fonts/FoxitSymbol.pfb", "vendor/standard_fonts/FoxitSerifItalic.pfb", "vendor/standard_fonts/FoxitSerifBold.pfb", "vendor/standard_fonts/LiberationSans-Regular.ttf"];
+ self.addEventListener('install',e=>{e.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(APP_FILES))) });
+ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pdf-memo-')&&k!==APP_CACHE).map(k=>caches.delete(k)))) )});
