@@ -1,7 +1,11 @@
 /* Survey extension on top of unchanged PDF editing engine. No changes to source app.js. */
 (()=>{'use strict';
-const by=id=>document.getElementById(id);const PREFIX='field-survey-v03';let records={},activeId=null,placing=false,changeSerial=0,db=null,activeStorageKey=null,storageGeneration=0,storageLoading=false;
+const by=id=>document.getElementById(id);const PREFIX='field-survey-v03';let records={},activeId=null,placing=false,changeSerial=0,db=null,activeStorageKey=null,storageGeneration=0,storageLoading=false,siteId='';
 const status=msg=>by('surveyStatus').textContent=msg;
+const siteField=by('surveySiteId'),siteCurrent=by('surveySiteCurrent');
+function validateSite(v){const id=String(v||'').trim();return id.length>=1&&id.length<=60&&!/[<>\\/\x00-\x1f]/.test(id)?id:null}
+function siteLabel(){siteCurrent.textContent=siteId?'使用中の現場：'+siteId:'現場未設定・写真とメモは保存されません'}
+siteLabel();
 const getPage=()=>typeof pageEntries!=='undefined'&&pageEntries[page-1] ? pageEntries[page-1].id : null;
 const pins=()=>Object.entries(items||{}).flatMap(([pageId,arr])=>(arr||[]).filter(o=>o.surveyId&&o.type==='stamp').map(o=>({pageId,o})));
 // Numbering is scoped to this PDF session's page entries, never the global photo database.
@@ -119,25 +123,27 @@ by('surveyClose').onclick=()=>hideSurveyDialog();
 for(const [id,key] of [['surveyMemo','memo'],['surveyInstruction','instruction']])by(id).addEventListener('input',()=>{if(!activeId||!records[activeId])return;records[activeId][key]=by(id).value;queueSave();renderList()});
 async function photos(e){if(!activeId){status('先に番号を選択してください');return}const r=records[activeId];if(!r)return;for(const f of [...e.target.files]){if(!f.type.startsWith('image/'))continue;if(f.size>15*1024*1024){status('15MBを超える写真は追加できません');continue}const data=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(f)});r.photos.push({name:safeName(f.name),data})}e.target.value='';renderPhotos();renderList();queueSave()}
 by('surveyCamera').onchange=photos;by('surveyPhotos').onchange=photos;
+by('surveySiteApply').onclick=async()=>{const next=validateSite(siteField.value);if(!next){status('現場IDを1〜60文字で入力してください。');return}if(next===siteId){status('この現場を使用中です。');return}if(activeStorageKey&&db){clearTimeout(changeSerial);try{await dbPut(activeStorageKey,{records:structuredClone(records),version:3,siteId})}catch(e){status('現在の現場の記録保存に失敗しました。切替を中止しました。');return}}siteId=next;siteLabel();try{localStorage.setItem(PREFIX+':siteId',siteId)}catch(e){console.warn('Site ID preference not persisted',e)}await syncDocumentRecords();status('現場ID「'+siteId+'」に切り替えました。')};
 function queueSave(){clearTimeout(changeSerial);changeSerial=setTimeout(()=>{void save()},450)}
 function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PREFIX,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('survey'))req.result.createObjectStore('survey')};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 // Use PDF.js original-file fingerprint, never the filename, which may be reused across jobs.
-function documentStorageKey(){if(!doc||typeof sources==='undefined'||!sources.length)return null;const fp=sources[0]?.doc?.fingerprints?.[0];return typeof fp==='string'&&/^[a-zA-Z0-9_-]{8,128}$/.test(fp)?'document:'+fp:null}
+function pdfFingerprint(){if(!doc||typeof sources==='undefined'||!sources.length)return null;const fp=sources[0]?.doc?.fingerprints?.[0];return typeof fp==='string'&&/^[a-zA-Z0-9_-]{8,128}$/.test(fp)?fp:null}
+function documentStorageKey(){const fp=pdfFingerprint();return siteId&&fp?'site:'+encodeURIComponent(siteId)+':document:'+fp:null}
 function dbGet(key){return new Promise((resolve,reject)=>{const tx=db.transaction('survey','readonly');const req=tx.objectStore('survey').get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 function dbPut(key,value){return new Promise((resolve,reject)=>{const tx=db.transaction('survey','readwrite');tx.objectStore('survey').put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 async function syncDocumentRecords(){
  const key=documentStorageKey();if(key===activeStorageKey)return;
- const generation=++storageGeneration;const previousKey=activeStorageKey;const previousRecords=records;clearTimeout(changeSerial);if(previousKey&&db){try{await dbPut(previousKey,{records:structuredClone(previousRecords),version:2})}catch(err){console.warn('Previous PDF save failed',err);status('前のPDFの記録を保存できませんでした。切替を中止してください。');return}}if(generation!==storageGeneration)return;activeStorageKey=key;storageLoading=!!key;records={};activeId=null;hideSurveyDialog();renderList();if(!key)return;
+ const generation=++storageGeneration;const previousKey=activeStorageKey;const previousRecords=records;clearTimeout(changeSerial);if(previousKey&&db){try{await dbPut(previousKey,{records:structuredClone(previousRecords),version:3})}catch(err){console.warn('Previous PDF save failed',err);status('前のPDFの記録を保存できませんでした。切替を中止してください。');return}}if(generation!==storageGeneration)return;activeStorageKey=key;storageLoading=!!key;records={};activeId=null;hideSurveyDialog();renderList();if(!key)return;
  try{
   db ||=await openDb();const stored=await dbGet(key);if(generation!==storageGeneration)return;
   if(stored&&stored.records&&typeof stored.records==='object')records=stored.records;
   else{
    // Keep legacy 'latest' intact. Copy only ID-matched records, after explicit confirmation.
-   const legacy=await dbGet('latest');if(generation!==storageGeneration)return;
+   const oldDocKey='document:'+pdfFingerprint();const previous=await dbGet(oldDocKey);const legacy=previous?.records?previous:await dbGet('latest');if(generation!==storageGeneration)return;
    const ids=new Set(documentPins().map(p=>p.o.surveyId));
    const matches=Object.fromEntries(Object.entries(legacy?.records||{}).filter(([id])=>ids.has(id)));
    if(Object.keys(matches).length&&confirm('以前の保存データから、このPDFの番号と一致する写真・メモが見つかりました。コピーして引き継ぎますか？（元データは残します）')){
-    if(generation!==storageGeneration)return;records=matches;await dbPut(key,{records:matches,version:2,migratedFrom:'latest'});
+    if(generation!==storageGeneration)return;records=matches;await dbPut(key,{records:matches,version:3,siteId,migratedFrom:previous?.records?oldDocKey:'latest'});
    }
   }
   if(generation===storageGeneration){storageLoading=false;renderList();status('このPDF専用の写真・メモを読み込みました。')}
@@ -146,16 +152,16 @@ async function syncDocumentRecords(){
 async function save(){
  const key=activeStorageKey;if(!key||key!==documentStorageKey()||storageLoading){status('保存先PDFを確認できないため記録を保存していません。');return}
  try{db ||=await openDb();if(key!==activeStorageKey||key!==documentStorageKey())return;
-  const snapshotRecords=structuredClone(records);await dbPut(key,{records:snapshotRecords,version:2});
+  const snapshotRecords=structuredClone(records);await dbPut(key,{records:snapshotRecords,version:3,siteId});
   status('写真・メモをこのPDF専用の端末保存領域へ保存しました（番号印はPDF保存も行ってください）。');
  }catch(err){console.warn(err);status('保存に失敗しました。バックアップを作成してください。')}
 }
 function download(data,name){const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),4000)}
-by('surveyExport').onclick=()=>{download({type:PREFIX,version:2,documentKey:activeStorageKey,exportedAt:new Date().toISOString(),records},'現場調査_写真メモ_'+new Date().toISOString().slice(0,10)+'.json');status('このPDFの写真・メモをバックアップしました。番号印は別途PDF保存してください。')};
+by('surveyExport').onclick=()=>{download({type:PREFIX,version:2,documentKey:activeStorageKey,siteId,exportedAt:new Date().toISOString(),records},'現場調査_写真メモ_'+new Date().toISOString().slice(0,10)+'.json');status('このPDFの写真・メモをバックアップしました。番号印は別途PDF保存してください。')};
 by('surveyImport').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{
  if(!activeStorageKey||activeStorageKey!==documentStorageKey()||storageLoading)throw Error('対応するPDFを先に開いてください');
  const d=JSON.parse(await f.text());if(d.type!==PREFIX||!d.records||typeof d.records!=='object'||Array.isArray(d.records))throw Error('形式が異なります');
- if(d.documentKey&&d.documentKey!==activeStorageKey)throw Error('異なるPDFのバックアップです');
+ if(d.siteId&&d.siteId!==siteId)throw Error('異なる現場IDのバックアップです');if(d.documentKey&&d.documentKey!==activeStorageKey&&!d.documentKey.startsWith('document:'))throw Error('異なるPDFのバックアップです');
  const ids=new Set(documentPins().map(p=>p.o.surveyId));
  const imported=Object.fromEntries(Object.entries(d.records).filter(([id])=>ids.has(id)));
  if(Object.keys(d.records).length!==Object.keys(imported).length)throw Error('このPDFに存在しない番号の記録が含まれています');
@@ -164,5 +170,6 @@ by('surveyImport').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;t
  }catch(err){status('バックアップ形式を確認してください：'+err.message)}finally{e.target.value=''}};
 // Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
 setInterval(()=>{if(documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
+try{siteId=validateSite(localStorage.getItem(PREFIX+':siteId'))||''}catch(e){siteId=''}siteField.value=siteId;siteLabel();
 void openDb().then(v=>{db=v;void syncDocumentRecords()}).catch(()=>status('端末の保存領域を開けませんでした'));
 })();
