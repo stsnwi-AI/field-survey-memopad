@@ -127,7 +127,7 @@ function dbGet(key){return new Promise((resolve,reject)=>{const tx=db.transactio
 function dbPut(key,value){return new Promise((resolve,reject)=>{const tx=db.transaction('survey','readwrite');tx.objectStore('survey').put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 async function syncDocumentRecords(){
  const key=documentStorageKey();if(key===activeStorageKey)return;
- const generation=++storageGeneration;clearTimeout(changeSerial);activeStorageKey=key;storageLoading=!!key;records={};activeId=null;hideSurveyDialog();renderList();if(!key)return;
+ const generation=++storageGeneration;const previousKey=activeStorageKey;const previousRecords=records;clearTimeout(changeSerial);if(previousKey&&db){try{await dbPut(previousKey,{records:structuredClone(previousRecords),version:2})}catch(err){console.warn('Previous PDF save failed',err);status('前のPDFの記録を保存できませんでした。切替を中止してください。');return}}if(generation!==storageGeneration)return;activeStorageKey=key;storageLoading=!!key;records={};activeId=null;hideSurveyDialog();renderList();if(!key)return;
  try{
   db ||=await openDb();const stored=await dbGet(key);if(generation!==storageGeneration)return;
   if(stored&&stored.records&&typeof stored.records==='object')records=stored.records;
