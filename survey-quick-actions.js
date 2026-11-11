@@ -19,7 +19,7 @@
   }
 
   pin.addEventListener('click', () => {
-    if (!window.doc) {
+    if ((typeof doc === 'undefined' || !doc)) {
       const status = document.getElementById('status');
       if (status) status.textContent = '先にPDF図面を開いてください。';
       return;
@@ -39,7 +39,7 @@
   originalPin.addEventListener('click', () => queueMicrotask(syncPin));
 
   remove.addEventListener('click', () => {
-    if (!window.doc || typeof window.selectionIndices !== 'function' || !selectionIndices().length) {
+    if ((typeof doc === 'undefined' || !doc) || typeof selectionIndices !== 'function' || !selectionIndices().length) {
       const status = document.getElementById('status');
       if (status) status.textContent = '「選択・移動・削除」で書き込みを選んでから削除してください。';
       return;
