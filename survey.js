@@ -180,13 +180,14 @@ function validateBundle(payload){
  if(!project||project.format!=='kantan-pdf-project'||project.schemaVersion!==2||!Array.isArray(project.sourcePDFs)||!project.sourcePDFs.length||project.sourcePDFs.length>100)throw Error('PDF図面データが不正です');
  if(!Array.isArray(project.pageEntries)||!project.pageEntries.length||project.pageEntries.length>2000||!project.annotationsByPage||typeof project.annotationsByPage!=='object'||Array.isArray(project.annotationsByPage))throw Error('図面のページ・番号情報が不正です');
  if(!payload.records||typeof payload.records!=='object'||Array.isArray(payload.records))throw Error('写真・コメント情報が不正です');
+ // Preserve orphan records too: deleting a pin must not silently discard historical photos.
  const pinsInBundle=new Set();
  for(const entry of project.pageEntries){
   if(!entry||typeof entry.id!=='string'||!Array.isArray(project.annotationsByPage[entry.id]||[]))throw Error('図面構成が不正です');
   for(const obj of project.annotationsByPage[entry.id]||[])if(obj?.surveyId&&obj.type==='stamp')pinsInBundle.add(obj.surveyId);
  }
  for(const [id,r] of Object.entries(payload.records)){
-  if(!pinsInBundle.has(id)||!r||typeof r!=='object'||Array.isArray(r)||typeof r.memo!=='string'||typeof r.instruction!=='string'||!Array.isArray(r.photos)||r.photos.length>200)throw Error('番号と写真・メモの整合性を確認できません');
+  if(!r||typeof r!=='object'||Array.isArray(r)||typeof r.memo!=='string'||typeof r.instruction!=='string'||!Array.isArray(r.photos)||r.photos.length>200)throw Error('番号と写真・メモの整合性を確認できません');
   for(const p of r.photos)if(!p||typeof p.data!=='string'||!/^data:image\/(?:jpeg|png|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(p.data))throw Error('写真データの形式が不正です');
  }
  return {site,project,records:payload.records};
