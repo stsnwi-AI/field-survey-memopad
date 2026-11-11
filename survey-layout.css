@@ -90,3 +90,59 @@ main>.workspace{width:100%;flex:1 1 auto;min-width:0}
  #surveyToolDock.dock-floating #tools{grid-template-columns:repeat(2,minmax(0,1fr))!important}
  #surveyToolDock.dock-floating #tools button{min-height:44px!important}
 }
+
+/* Tablet-first top bar: reserve vertical space for the PDF.
+   All actions remain 44px touch targets; their full names remain in aria-label/title. */
+@media (max-width:1180px){
+ body>header{
+  display:flex!important;flex-wrap:nowrap!important;
+  min-height:0!important;padding:4px 8px!important;
+  padding-top:max(4px,env(safe-area-inset-top))!important;
+  gap:5px!important;align-items:center;overflow:visible;
+ }
+ body>header .brand{
+  width:auto!important;min-width:0!important;max-width:none!important;
+  flex:1 1 auto!important;margin:0!important;gap:5px!important;
+ }
+ body>header .brand-mark{
+  width:30px!important;height:30px!important;min-width:30px;
+  border-radius:5px!important;
+ }
+ body>header .brand-mark .ui-icon{width:19px!important;height:19px!important}
+ body>header .brand>span:last-child{
+  font-size:clamp(10px,1.6vw,14px)!important;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;letter-spacing:0!important;
+ }
+ body>header .brand small{display:none!important}
+ body>header .open,body>header #save,body>header #openAnotherPDF,body>header #showSurveyTools{
+  display:inline-flex!important;flex:0 0 44px!important;
+  order:initial!important;width:44px!important;height:44px!important;
+  min-width:44px!important;min-height:44px!important;max-width:44px!important;
+  padding:0!important;margin:0!important;
+  justify-content:center;align-items:center;line-height:1!important;
+  border-radius:7px!important;font-size:0!important;white-space:nowrap!important;
+ }
+ body>header .open span,body>header #save span,body>header #openAnotherPDF span{
+  display:none!important;
+ }
+ body>header .open .ui-icon,body>header #save .ui-icon,body>header #openAnotherPDF .ui-icon{
+  width:21px!important;height:21px!important;flex:0 0 21px!important;
+ }
+ body>header #openAnotherPDF{
+  text-decoration:none;background:#f6f8f9;color:#1b3545;
+  border:1px solid #c7d3da;
+ }
+ body>header #showSurveyTools::before{
+  content:"☷";font-size:23px;line-height:1;
+ }
+}
+@media(max-width:540px){
+ body>header{gap:3px!important;padding-left:4px!important;padding-right:4px!important}
+ body>header .brand-mark{width:25px!important;min-width:25px;height:25px!important}
+ body>header .brand>span:last-child{font-size:11px!important}
+ body>header .open,body>header #save,body>header #openAnotherPDF,body>header #showSurveyTools{
+  width:42px!important;min-width:42px!important;max-width:42px!important;
+  height:44px!important;min-height:44px!important;flex-basis:42px!important;
+ }
+}
