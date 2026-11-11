@@ -159,3 +159,52 @@ header .brand small{display:none!important}
 #surveyToolDock.dock-floating #tools .survey-palette-action .ui-icon{
  width:18px;height:18px;
 }
+
+/* v1.4 wide drawing: hide the unused purple auxiliary control strip,
+   while retaining its original DOM and keyboard/undo logic. */
+.workspace #quickBar{display:none!important}
+
+/* Fixed page control works even when the PDF viewport is panned or scrolled. */
+#fixedPageNav{
+ position:fixed;top:82px;left:50%;transform:translateX(-50%);
+ z-index:45;display:flex;align-items:center;justify-content:center;
+ gap:5px;padding:4px 8px;background:#173e53;color:#fff;
+ border:1px solid #41687b;border-radius:0 0 10px 10px;
+ box-shadow:0 3px 14px #102b3b44;max-width:calc(100vw - 12px);
+}
+#fixedPageNav .fixed-page-controls{display:flex!important;align-items:center;gap:5px;margin:0!important}
+#fixedPageNav button,#fixedPageNav select{
+ min-width:43px;min-height:43px;padding:5px 9px;border-radius:6px;
+ background:#f8fbfc;color:#173e53;border:1px solid #b7cbd4;
+ font-size:16px;touch-action:manipulation;
+}
+#fixedPageNav #page{color:white;min-width:65px;text-align:center;white-space:nowrap;font-weight:750}
+#fixedPageNav #panDrawing{font-size:12px;font-weight:700;white-space:nowrap;min-width:83px}
+#fixedPageNav #panDrawing.active{background:#ffdc8a;color:#5a3509;border-color:#e79b2f}
+#fixedPageNav select#zoom{font-size:12px;max-width:86px}
+
+/* Give the PDF its own continuously scrollable touch viewport. */
+main>.workspace{
+ height:calc(100dvh - 92px)!important;min-height:0!important;
+ max-height:none!important;overflow:auto!important;
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ scroll-behavior:auto;
+}
+main>.workspace #paper{margin:56px auto 24px}
+main>.workspace .bar{position:relative;z-index:3;padding:0;background:transparent;border:0}
+main>.workspace .bar:has(#textComposer:not([hidden])){padding:56px 10px 0}
+main>.workspace .bar #textComposer{max-width:670px;margin:0 auto}
+@media(max-width:1180px){
+ #fixedPageNav{top:calc(max(4px,env(safe-area-inset-top)) + 52px)}
+ main>.workspace{height:calc(100dvh - 58px)!important}
+ main>.workspace #paper{margin-top:58px}
+}
+@media(max-width:600px){
+ #fixedPageNav{gap:3px;padding:3px 5px;width:max-content;max-width:calc(100vw - 4px)}
+ #fixedPageNav .fixed-page-controls{gap:3px}
+ #fixedPageNav button,#fixedPageNav select{min-width:40px;min-height:44px;padding:5px}
+ #fixedPageNav #page{min-width:55px;font-size:12px}
+ #fixedPageNav #panDrawing{min-width:76px;font-size:11px}
+ #fixedPageNav select#zoom{max-width:73px;font-size:11px}
+ main>.workspace #paper{margin-top:59px}
+}
