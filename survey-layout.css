@@ -274,3 +274,27 @@ main>.workspace .bar:has(#textComposer:not([hidden])){padding:8px 10px 0}
  #fixedPageNav button{min-width:38px!important;max-width:38px!important;font-size:17px!important}
  #fixedPageNav .fixed-page-controls{gap:1px!important}
 }
+
+/* Palette safety: the controls never extend past screen edges. */
+#surveyToolDock.dock-floating{
+ z-index:62!important;box-sizing:border-box!important;
+ overscroll-behavior:contain!important;
+}
+#surveyToolDock.dock-floating .dock-grip{touch-action:none!important}
+#surveySettingsPanel #mobileMoreActions{
+ display:block!important;order:initial!important;position:static!important;
+ width:100%!important;max-width:100%!important;margin-top:16px!important;
+ border:1px solid #c1d0d9;border-radius:8px;background:#fff;padding:9px;
+}
+#surveySettingsPanel #mobileMoreActions>summary{
+ display:list-item!important;min-height:44px;cursor:pointer;
+ padding:10px 7px!important;font-size:13px;
+}
+#surveySettingsPanel #mobileMoreActions>#mobileToolbar{
+ position:static!important;top:auto!important;right:auto!important;left:auto!important;
+ width:100%!important;max-width:100%!important;max-height:none!important;
+ overflow:visible!important;box-shadow:none!important;border:0!important;
+ padding:7px 0!important;flex-wrap:wrap!important;
+}
+#surveySettingsPanel #mobileMoreActions[open]>#mobileToolbar{display:flex!important}
+#surveySettingsPanel #mobileMoreActions:not([open])>#mobileToolbar{display:none!important}
