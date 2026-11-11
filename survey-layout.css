@@ -298,3 +298,26 @@ main>.workspace .bar:has(#textComposer:not([hidden])){padding:8px 10px 0}
 }
 #surveySettingsPanel #mobileMoreActions[open]>#mobileToolbar{display:flex!important}
 #surveySettingsPanel #mobileMoreActions:not([open])>#mobileToolbar{display:none!important}
+
+/* Header input method toggle: manual touch drawing or pen-first navigation. */
+body>header #inputMethodToggle{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ flex:0 0 auto;min-height:44px;padding:5px 8px;margin:0!important;
+ font-size:12px;font-weight:750;white-space:nowrap;
+ background:#e8f1f5;color:#173e53;border:1px solid #acc3ce;
+ border-radius:7px;touch-action:manipulation;
+}
+body>header #inputMethodToggle[data-mode="pen"]{
+ background:#ffe3a1;color:#613c0d;border:2px solid #e7a53b;
+}
+@media(max-width:1180px){
+ body>header #inputMethodToggle{width:60px!important;max-width:60px!important;padding:4px 2px!important;font-size:11px!important}
+}
+@media(max-width:600px){
+ body>header #inputMethodToggle{
+   flex:0 0 39px!important;width:39px!important;max-width:39px!important;
+   font-size:0!important;padding:0!important;min-height:44px!important;
+ }
+ body>header #inputMethodToggle::after{content:"指";font-size:15px!important}
+ body>header #inputMethodToggle[data-mode="pen"]::after{content:"ペン";font-size:11px!important}
+}
