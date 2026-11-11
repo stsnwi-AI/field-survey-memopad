@@ -208,3 +208,23 @@ main>.workspace .bar #textComposer{max-width:670px;margin:0 auto}
  #fixedPageNav select#zoom{max-width:73px;font-size:11px}
  main>.workspace #paper{margin-top:59px}
 }
+
+/* v1.4 easy-to-move palette / optional PDF share */
+#surveyToolDock.dock-floating #dockGrip{
+ display:inline-flex!important;visibility:visible!important;
+ min-height:44px!important;font-weight:800!important;
+ border:2px solid #e0a144!important;background:#174257!important;color:#fff!important;
+}
+#surveyToolDock.dock-floating #dockMode{
+ display:inline-flex!important;min-height:44px!important;
+}
+#optionalShare{width:100%;border-top:1px solid #c9d5dc;margin-top:5px;padding-top:7px}
+#optionalShare>summary{cursor:pointer;font-size:12px;font-weight:700;padding:8px 4px}
+#optionalShare>p{font-size:12px;line-height:1.5;margin:5px 0}
+#optionalShare .optional-share-controls{display:flex;flex-wrap:wrap;gap:6px}
+#optionalShare .optional-share-controls button{min-height:44px}
+#optionalShare [hidden]{display:none!important}
+@media(max-width:750px){
+ #surveyToolDock.dock-floating #dockMode{display:inline-flex!important}
+ #surveyToolDock.dock-floating #dockGrip{min-width:68px}
+}
