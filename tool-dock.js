@@ -35,8 +35,9 @@
     }
   }
   if (toggle) toggle.addEventListener('click', () => setDockVisible(dock.classList.contains('dock-collapsed')));
-  // Restore the upper writing toolbar as the default workspace (v1.1).
-  setDockVisible(true);
+  // On smaller screens keep the drawing area taller; the header toggle restores all tools.
+  // Desktop retains the established v1.1 upper toolbar by default.
+  setDockVisible(!compact.matches);
   // The second, touch-specific operation row is no longer exposed below the toolbar.
   // Keep its original buttons and handlers in an on-demand section of the upper bar.
   const mobileRow = document.getElementById('mobileToolbar');
