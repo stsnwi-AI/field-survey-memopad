@@ -18,8 +18,14 @@
   move.setAttribute('aria-pressed','false');
   move.title='指で図面を上下左右に移動する（編集はパレットから再開）';
   pageControls.classList.add('fixed-page-controls');
+  // Keep the existing zoom control in the workspace. Only page turns occupy
+  // the permanently visible title row, avoiding overlap with the palette.
+  const zoomHome=document.createElement('div');
+  zoomHome.id='zoomHome';
+  zoomHome.append(zoom);
+  bar.append(zoomHome);
   strip.append(pageControls,move);
-  header.after(strip);
+  header.querySelector('.brand')?.after(strip);
 
   function syncMove(){
     const browse=typeof touchMode!=='undefined'&&touchMode==='browse';
