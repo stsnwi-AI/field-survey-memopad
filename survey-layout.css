@@ -146,3 +146,16 @@ main>.workspace{width:100%;flex:1 1 auto;min-width:0}
   height:44px!important;min-height:44px!important;flex-basis:42px!important;
  }
 }
+
+/* v1.4: keep the drawing workspace clear until text entry is requested. */
+header .brand small{display:none!important}
+#textComposer[hidden],#newTextRow[hidden],#editTextRow[hidden]{display:none!important}
+#surveyToolDock.dock-floating #tools #surveyPalettePin.active{
+ background:#fff1d9!important;border:2px solid #eaa342!important;color:#603d13!important;
+}
+#surveyToolDock.dock-floating #tools #surveyPaletteDelete{
+ border-color:#e3c2bb!important;background:#fff6f3!important;color:#813f30!important;
+}
+#surveyToolDock.dock-floating #tools .survey-palette-action .ui-icon{
+ width:18px;height:18px;
+}
