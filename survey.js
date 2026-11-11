@@ -51,7 +51,7 @@ canvas.addEventListener('dblclick',e=>{
 // Two deliberate taps on a pin also open the dialog on touch devices.
 let recentTap=null;
 canvas.addEventListener('pointerup',e=>{
- if(e.pointerType!=='touch'||placing||!doc||rendering||pageBusy||!e.isPrimary)return;
+ if(e.pointerType!=='touch'||window.fieldStylusMode||placing||!doc||rendering||pageBusy||!e.isPrimary)return;
  const p=point(e),idx=[...list().keys()].reverse().find(i=>list()[i]?.surveyId&&hitAnnotation(list()[i],p));
  if(idx===undefined){recentTap=null;return}
  const pin=list()[idx],now=Date.now();
@@ -98,7 +98,7 @@ canvas.addEventListener('contextmenu',e=>{
 },true);
 canvas.addEventListener('pointerdown',e=>{
  if(!placing)return;
- if(e.pointerType==='touch'&&e.isPrimary&&e.button===0){
+ if(e.pointerType==='touch'&&!window.fieldStylusMode&&e.isPrimary&&e.button===0){
   if(placeFromEvent(e))lastTouchPlacement=Date.now();
  }else if(e.pointerType==='pen'&&e.button===0){
   placeFromEvent(e);
