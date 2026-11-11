@@ -168,8 +168,75 @@ by('surveyImport').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;t
  if(!confirm('このPDFの写真・メモ記録を読み込みデータで置き換えますか？'))return;
  records=imported;activeId=null;hideSurveyDialog();await save();renderList();status('このPDFの写真・メモを読み込みました。');
  }catch(err){status('バックアップ形式を確認してください：'+err.message)}finally{e.target.value=''}};
+
+/* v1.3: One self-contained JSON file with original PDFs, editable annotations and site records.
+   The old PDF export and photo/memo JSON exports remain unchanged. */
+let bundleBusy=false;
+function validateBundle(payload){
+ if(!payload||payload.format!=='field-survey-complete'||payload.version!==1)throw Error('現場データ一括ファイルではありません');
+ const site=validateSite(payload.siteId);
+ if(!site)throw Error('現場IDが不正です');
+ const project=payload.project;
+ if(!project||project.format!=='kantan-pdf-project'||project.schemaVersion!==2||!Array.isArray(project.sourcePDFs)||!project.sourcePDFs.length||project.sourcePDFs.length>100)throw Error('PDF図面データが不正です');
+ if(!Array.isArray(project.pageEntries)||!project.pageEntries.length||project.pageEntries.length>2000||!project.annotationsByPage||typeof project.annotationsByPage!=='object'||Array.isArray(project.annotationsByPage))throw Error('図面のページ・番号情報が不正です');
+ if(!payload.records||typeof payload.records!=='object'||Array.isArray(payload.records))throw Error('写真・コメント情報が不正です');
+ const pinsInBundle=new Set();
+ for(const entry of project.pageEntries){
+  if(!entry||typeof entry.id!=='string'||!Array.isArray(project.annotationsByPage[entry.id]||[]))throw Error('図面構成が不正です');
+  for(const obj of project.annotationsByPage[entry.id]||[])if(obj?.surveyId&&obj.type==='stamp')pinsInBundle.add(obj.surveyId);
+ }
+ for(const [id,r] of Object.entries(payload.records)){
+  if(!pinsInBundle.has(id)||!r||typeof r!=='object'||Array.isArray(r)||typeof r.memo!=='string'||typeof r.instruction!=='string'||!Array.isArray(r.photos)||r.photos.length>200)throw Error('番号と写真・メモの整合性を確認できません');
+  for(const p of r.photos)if(!p||typeof p.data!=='string'||!/^data:image\/(?:jpeg|png|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(p.data))throw Error('写真データの形式が不正です');
+ }
+ return {site,project,records:payload.records};
+}
+by('surveyBundleExport').onclick=async()=>{
+ if(bundleBusy)return;
+ if(!doc||!activeStorageKey||storageLoading||activeStorageKey!==documentStorageKey()){status('現場IDとPDFを設定してから一括保存してください。');return}
+ bundleBusy=true;
+ try{
+  clearTimeout(changeSerial);
+  await save();
+  if(!db)throw Error('端末保存領域がありません');
+  const snapshotRecords=structuredClone(records);
+  const project=makeProject();
+  const bundle={format:'field-survey-complete',version:1,appVersion:'1.3-dev',siteId,exportedAt:new Date().toISOString(),project,records:snapshotRecords};
+  validateBundle(bundle);
+  const name='現場調査一括_'+siteId.replace(/[^\w\u3040-\u30ff\u3400-\u9fff-]/g,'_').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.json';
+  download(bundle,name);
+  status('現場データ一括ファイルのダウンロードを開始しました。保存先を確認してください。');
+ }catch(e){console.warn(e);status('一括保存できませんでした：'+e.message)}
+ finally{bundleBusy=false}
+};
+by('surveyBundleImport').onchange=async e=>{
+ const file=e.target.files?.[0];e.target.value='';if(!file||bundleBusy)return;
+ bundleBusy=true;
+ try{
+  if(file.size>250*1024*1024)throw Error('ファイルサイズが250MBを超えています');
+  const payload=JSON.parse(await file.text());
+  const {site,project,records:nextRecords}=validateBundle(payload);
+  if(!confirm('現場「'+site+'」のPDF・調査番号・写真・コメントを復元します。\n現在開いている未保存の編集内容は置き換わります。続行しますか？'))return;
+  // Protect current work before switching; the old record keys are retained in IndexedDB.
+  clearTimeout(changeSerial);
+  if(activeStorageKey&&db)await dbPut(activeStorageKey,{records:structuredClone(records),version:3,siteId});
+  ++storageGeneration;
+  await restoreProject(project);
+  const previousSite=siteId;
+  siteId=site;siteField.value=site;siteLabel();
+  try{localStorage.setItem(PREFIX+':siteId',siteId)}catch(err){console.warn(err)}
+  const newKey=documentStorageKey();
+  if(!newKey){siteId=previousSite;siteField.value=previousSite;siteLabel();throw Error('復元後の図面識別子を取得できません')}
+  db ||=await openDb();
+  await dbPut(newKey,{records:structuredClone(nextRecords),version:3,siteId,restoredFrom:'complete-bundle'});
+  activeStorageKey=newKey;storageLoading=false;records=structuredClone(nextRecords);activeId=null;hideSurveyDialog();renderList();
+  status('現場「'+siteId+'」のPDF・番号・写真・メモを復元しました。必要に応じてPDFも別途保存してください。');
+ }catch(err){console.warn(err);status('一括復元できませんでした：'+err.message+'。元の一括ファイルは保管してください。')}
+ finally{bundleBusy=false}
+};
+
 // Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
-setInterval(()=>{if(documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
+setInterval(()=>{if(!bundleBusy&&documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
 try{siteId=validateSite(localStorage.getItem(PREFIX+':siteId'))||''}catch(e){siteId=''}siteField.value=siteId;siteLabel();
 void openDb().then(v=>{db=v;void syncDocumentRecords()}).catch(()=>status('端末の保存領域を開けませんでした'));
 })();
