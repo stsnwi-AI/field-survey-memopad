@@ -4,7 +4,7 @@ const by=id=>document.getElementById(id);const PREFIX='field-survey-v03';let rec
 const status=msg=>by('surveyStatus').textContent=msg;
 const siteField=by('surveySiteId'),siteCurrent=by('surveySiteCurrent');
 function validateSite(v){const id=String(v||'').trim();return id.length>=1&&id.length<=60&&!/[<>\\/\x00-\x1f]/.test(id)?id:null}
-function siteLabel(){siteCurrent.textContent=siteId?'使用中の現場：'+siteId:'現場未設定・写真とメモは保存されません'}
+function siteLabel(){siteCurrent.textContent=siteId?'旧方式の現場ID：'+siteId+'（PDF内の調査記録が優先されます）':'通常は現場ID不要。編集済みPDFに写真・メモも保存します'}
 siteLabel();
 const getPage=()=>typeof pageEntries!=='undefined'&&pageEntries[page-1] ? pageEntries[page-1].id : null;
 const pins=()=>Object.entries(items||{}).flatMap(([pageId,arr])=>(arr||[]).filter(o=>o.surveyId&&o.type==='stamp').map(o=>({pageId,o})));
@@ -128,7 +128,7 @@ function queueSave(){clearTimeout(changeSerial);changeSerial=setTimeout(()=>{voi
 function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PREFIX,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('survey'))req.result.createObjectStore('survey')};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 // Use PDF.js original-file fingerprint, never the filename, which may be reused across jobs.
 function pdfFingerprint(){if(!doc||typeof sources==='undefined'||!sources.length)return null;const fp=sources[0]?.doc?.fingerprints?.[0];return typeof fp==='string'&&/^[a-zA-Z0-9_-]{8,128}$/.test(fp)?fp:null}
-function documentStorageKey(){const fp=pdfFingerprint();return siteId&&fp?'site:'+encodeURIComponent(siteId)+':document:'+fp:null}
+function documentStorageKey(){const fp=pdfFingerprint();return fp?(siteId?'site:'+encodeURIComponent(siteId)+':document:'+fp:'document:'+fp):null}
 function dbGet(key){return new Promise((resolve,reject)=>{const tx=db.transaction('survey','readonly');const req=tx.objectStore('survey').get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 function dbPut(key,value){return new Promise((resolve,reject)=>{const tx=db.transaction('survey','readwrite');tx.objectStore('survey').put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 async function syncDocumentRecords(){
@@ -236,8 +236,53 @@ by('surveyBundleImport').onchange=async e=>{
  finally{bundleBusy=false}
 };
 
+
+// Primary v1.4 flow: a PDF with embedded surveyData is authoritative. Existing IndexedDB
+// and legacy JSON backup remain available for old PDFs. No site ID is needed for new work.
+window.surveyPDFExport=()=>({
+ format:'field-survey-records',schemaVersion:1,siteId:siteId||null,records:structuredClone(records)
+});
+window.surveyPreparePDFSave=async()=>{
+ if(!doc)throw Error('PDFを開いてください');
+ if(storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
+  throw Error('調査記録の読込が完了していません。PDFの表示を確認してから保存してください');
+ }
+ clearTimeout(changeSerial);
+ // Embedded PDF content is complete even when IndexedDB is unavailable.
+};
+window.surveyPDFLoaded=async(project)=>{
+ ++storageGeneration;
+ const generation=storageGeneration;
+ clearTimeout(changeSerial);
+ storageLoading=true;
+ const previousKey=activeStorageKey,previousRecords=records;
+ // Switching documents must not lose a pending local autosave.
+ if(previousKey&&db){try{await dbPut(previousKey,{records:structuredClone(previousRecords),version:3,siteId})}
+ catch(e){console.warn('Local record backup before PDF switch failed',e)}}
+ if(generation!==storageGeneration)return;
+ const embedded=project?.surveyData;
+ if(embedded!==undefined){
+  if(!embedded||embedded.format!=='field-survey-records'||embedded.schemaVersion!==1||!embedded.records||typeof embedded.records!=='object'||Array.isArray(embedded.records)){
+   storageLoading=false;throw Error('PDF内の調査記録の形式が不正です。記録を変更していません');
+  }
+  // Use the saved site label for compatibility, never as a required input.
+  siteId=validateSite(embedded.siteId)||'';
+  siteField.value=siteId;siteLabel();
+  records=structuredClone(embedded.records);
+  activeStorageKey=documentStorageKey();
+  activeId=null;hideSurveyDialog();storageLoading=false;renderList();
+  status('PDFから調査番号・写真・メモ・施工指示を復元しました。次回も「編集済みPDFを保存」を使用してください。');
+  return;
+ }
+ // Older PDFs lack surveyData. Look up their legacy local records without altering them.
+ activeStorageKey=null;records={};activeId=null;hideSurveyDialog();storageLoading=false;
+ await syncDocumentRecords();
+ if(generation!==storageGeneration)return;
+ status('旧形式のPDFを読み込みました。写真・メモが端末に残っている場合は旧バックアップから復元できます。');
+};
+
 // Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
-setInterval(()=>{if(!bundleBusy&&documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
+setInterval(()=>{if(!window.__surveyPdfLoading&&!bundleBusy&&documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
 try{siteId=validateSite(localStorage.getItem(PREFIX+':siteId'))||''}catch(e){siteId=''}siteField.value=siteId;siteLabel();
 void openDb().then(v=>{db=v;void syncDocumentRecords()}).catch(()=>status('端末の保存領域を開けませんでした'));
 })();
