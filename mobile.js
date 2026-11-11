@@ -23,7 +23,7 @@ if(objectClipboardChannel){const baseReceive=objectClipboardChannel.onmessage;ob
 // Two-finger gestures roll back an in-progress single-finger edit before zooming.
 const originalTouchHandlers={down:canvas.onpointerdown,move:canvas.onpointermove,up:canvas.onpointerup,cancel:canvas.onpointercancel};
 // Field survey stylus workflow: fingers pan/zoom; recognized pen pointers annotate.
-window.fieldStylusMode=true;
+window.fieldStylusMode=false; // Default to manual finger operation until a pen is detected or selected.
 const touchPointers=new Map();let gesture=null,touchCheckpoint=null,touchConsumed=false;
 function restoreTouchCheckpoint(){if(touchCheckpoint){items=touchCheckpoint.items;history.length=touchCheckpoint.historyLength;redoStack=touchCheckpoint.redo;dirty=touchCheckpoint.dirty;selectIndices(touchCheckpoint.indices);touchCheckpoint=null}working=start=dragHandle=dragGroup=null;draw()}
 function beginPinch(){const ps=[...touchPointers.values()];if(ps.length<2)return;restoreTouchCheckpoint();const center={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};const paper=canvas.getBoundingClientRect();gesture={distance:Math.max(1,Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y)),scale,center,anchorX:(center.x-paper.left)/scale,anchorY:(center.y-paper.top)/scale};touchConsumed=true}
@@ -34,7 +34,7 @@ canvas.onpointermove=e=>{if(e.pointerType!=='touch')return originalTouchHandlers
 function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?originalTouchHandlers.cancel:originalTouchHandlers.up)(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();if(cancelled)restoreTouchCheckpoint();else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='edit')originalTouchHandlers.up(e);else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='browse'&&gesture?.pan){const last=touchPointers.get(e.pointerId);if(last&&Math.hypot(last.x-gesture.x,last.y-gesture.y)<8){const hit=topAnnotationAt(point(e));if(hit>=0){setTool('select',false);selected=hit;syncEditor();draw()}}}// A deliberate vertical swipe beyond the page edge turns the page;
  // ordinary in-page vertical or horizontal movement remains panning.
  let turnPage=0;
- if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&window.fieldStylusMode&&doc&&!rendering&&!pageBusy){
+ if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){
    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
    if(Math.abs(dy)>=90&&Math.abs(dy)>Math.abs(dx)*1.5){
      if(dy<0&&gesture.atBottom&&page<doc.numPages)turnPage=1;
