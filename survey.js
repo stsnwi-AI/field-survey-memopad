@@ -237,11 +237,22 @@ by('surveyBundleImport').onchange=async e=>{
 };
 
 
+// Validate embedded data before displaying photos. Reject external URLs in untrusted PDFs.
+function safeEmbeddedSurvey(data){
+ if(!data||data.format!=='field-survey-records'||data.schemaVersion!==1||!data.records||typeof data.records!=='object'||Array.isArray(data.records))throw Error('PDF内の調査記録形式が不正です');
+ const entries=Object.entries(data.records);
+ if(entries.length>10000)throw Error('PDF内の調査記録が多すぎます');
+ for(const [id,r] of entries){
+  if(id==='__proto__'||!r||typeof r!=='object'||Array.isArray(r)||typeof r.memo!=='string'||typeof r.instruction!=='string'||r.memo.length>200000||r.instruction.length>200000||!Array.isArray(r.photos)||r.photos.length>300)throw Error('PDF内のメモ情報が不正です');
+  for(const p of r.photos){
+   if(!p||typeof p!=='object'||typeof p.data!=='string'||p.data.length>25*1024*1024||!/^data:image\/(?:png|jpeg|webp|gif|heic|heif|avif|bmp);base64,[A-Za-z0-9+/=]+$/.test(p.data))throw Error('PDF内の写真データが不正です');
+  }
+ }
+ return data;
+}
 // Primary v1.4 flow: a PDF with embedded surveyData is authoritative. Existing IndexedDB
 // and legacy JSON backup remain available for old PDFs. No site ID is needed for new work.
-window.surveyPDFExport=()=>({
- format:'field-survey-records',schemaVersion:1,siteId:siteId||null,records:structuredClone(records)
-});
+window.surveyPDFExport=()=>safeEmbeddedSurvey({format:'field-survey-records',schemaVersion:1,siteId:siteId||null,records:structuredClone(records)});
 window.surveyPreparePDFSave=async()=>{
  if(!doc)throw Error('PDFを開いてください');
  if(storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
@@ -262,14 +273,23 @@ window.surveyPDFLoaded=async(project)=>{
  if(generation!==storageGeneration)return;
  const embedded=project?.surveyData;
  if(embedded!==undefined){
-  if(!embedded||embedded.format!=='field-survey-records'||embedded.schemaVersion!==1||!embedded.records||typeof embedded.records!=='object'||Array.isArray(embedded.records)){
-   storageLoading=false;throw Error('PDF内の調査記録の形式が不正です。記録を変更していません');
-  }
+  try{safeEmbeddedSurvey(embedded)}catch(e){storageLoading=false;activeStorageKey=null;throw e}
   // Use the saved site label for compatibility, never as a required input.
   siteId=validateSite(embedded.siteId)||'';
   siteField.value=siteId;siteLabel();
   records=structuredClone(embedded.records);
   activeStorageKey=documentStorageKey();
+  // Preserve any older terminal-only record before a later edit replaces the same cache key.
+  if(activeStorageKey&&db){
+   try{
+    const old=await dbGet(activeStorageKey);
+    if(old?.records&&JSON.stringify(old.records)!==JSON.stringify(records)){
+     const archiveKey='preserved:'+activeStorageKey+':'+Date.now();
+     await dbPut(archiveKey,{records:old.records,siteId,version:old.version||1,preservedAt:new Date().toISOString()});
+    }
+   }catch(e){console.warn('Preserving prior terminal record failed',e)}
+  }
+  if(generation!==storageGeneration)return;
   activeId=null;hideSurveyDialog();storageLoading=false;renderList();
   status('PDFから調査番号・写真・メモ・施工指示を復元しました。次回も「編集済みPDFを保存」を使用してください。');
   return;
