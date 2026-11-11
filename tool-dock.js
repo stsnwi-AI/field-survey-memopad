@@ -18,6 +18,7 @@
   function clampPosition(x, y) {
     // Keep the whole palette visible. Dragging must not put its action buttons
     // beyond the left/right/bottom edge or behind the fixed title row.
+    dock.style.maxHeight = Math.max(90, window.innerHeight - headerBottom() - 12) + 'px';
     const rect = dock.getBoundingClientRect();
     const width = Math.min(rect.width || dock.offsetWidth || 300, window.innerWidth);
     const height = Math.min(rect.height || dock.offsetHeight || 400, window.innerHeight);
