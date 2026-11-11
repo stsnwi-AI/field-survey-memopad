@@ -9,22 +9,21 @@
   // Retain the same DOM nodes so PDF editor event listeners and state remain attached.
   dock.querySelector('.dock-tools').appendChild(tools);
   const compact = window.matchMedia('(max-width:750px)');
-  let floating = false;
-  function setMode(next) {
-    floating = !!next;
-    dock.classList.toggle('dock-floating', floating);
-    pin.textContent = floating ? '上部へ戻す' : '自由に移動';
-    pin.setAttribute('aria-pressed', String(floating));
-    grip.hidden = !floating;
-    if (!floating) {
-      dock.style.removeProperty('top');
-      dock.style.removeProperty('left');
-      dock.style.removeProperty('right');
-    } else {
-      dock.style.top = Math.max(8,Math.min(window.innerHeight - 64, compact.matches?105:120)) + 'px';
-      dock.style.right = '12px';
-      dock.style.left = 'auto';
-    }
+  // Palette remains floating at all times. The position button only resets it
+  // to a compact top position; the drag handle always stays visible.
+  let floating = true;
+  function setMode() {
+    floating = true;
+    dock.classList.add('dock-floating');
+    pin.textContent = '上部に配置';
+    pin.setAttribute('aria-pressed', 'true');
+    pin.title = 'パレットを画面上部へ戻す（移動は「⠿ 移動」をドラッグ）';
+    grip.hidden = false;
+    grip.title = 'ここを指やマウスでドラッグして移動';
+    const rectWidth = Math.min(compact.matches ? 268 : 322, window.innerWidth - 16);
+    dock.style.left = Math.max(6, window.innerWidth - rectWidth - 12) + 'px';
+    dock.style.right = 'auto';
+    dock.style.top = Math.max(90, Math.min(window.innerHeight - 70, 128)) + 'px';
   }
   // Hidden by default: accessible again without deleting any original PDF editing tools.
   function setDockVisible(visible) {
@@ -45,14 +44,14 @@
     more.id = 'mobileMoreActions';
     more.className = 'mobile-more-actions';
     const summary = document.createElement('summary');
-    summary.textContent = '表示・共有';
-    summary.setAttribute('aria-label', '表示モードや共有操作を開く');
+    summary.textContent = 'その他';
+    summary.setAttribute('aria-label', '表示・共有などの補助操作を開く');
     more.appendChild(summary);
     more.appendChild(mobileRow);
     dock.appendChild(more);
   }
-  pin.addEventListener('click', () => setMode(!floating));
-  compact.addEventListener('change', () => { if(floating) setMode(true); });
+  pin.addEventListener('click', () => setMode());
+  compact.addEventListener('change', () => { setMode(); });
   let drag = null;
   grip.addEventListener('pointerdown', e => {
     if (!floating || e.button !== 0) return;
@@ -74,7 +73,7 @@
   grip.addEventListener('lostpointercapture', stop);
   grip.addEventListener('pointercancel', stop);
   // Default to the movable palette without waiting for a separate editing-mode switch.
-  setMode(true);
+  setMode();
   window.addEventListener('resize', () => {
     if(!floating)return;
     const rect=dock.getBoundingClientRect();
