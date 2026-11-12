@@ -87,6 +87,25 @@ canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&w
  }selectionTouchStart=tool==='select'?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
 canvas.onpointermove=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.move(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2&&gesture?.distance){const ps=[...touchPointers.values()],distance=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);requestTouchZoom(gesture.scale*distance/gesture.distance,gesture);return}if(touchConsumed)return;if(gesture?.pan){mobileWorkspace.scrollLeft=gesture.left+gesture.x-e.clientX;mobileWorkspace.scrollTop=gesture.top+gesture.y-e.clientY;return}originalTouchHandlers.move(e)};
 function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?originalTouchHandlers.cancel:originalTouchHandlers.up)(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();if(cancelled)restoreTouchCheckpoint();
+ else if(!cancelled&&!touchConsumed&&gesture?.pan){
+   // A stationary tap selects the object under this finger, while a drag pans
+   // the PDF. Handle this BEFORE touchMode==='edit' to avoid stale selection.
+   const last=touchPointers.get(e.pointerId);
+   if(touchPointers.size===1&&last&&
+      Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<10&&
+      Math.hypot(last.x-gesture.x,last.y-gesture.y)<10){
+     const hit=topAnnotationAt(point(e));
+     if(tool!=='select')desktopSetTool('select',false);
+     if(!window.multiSelectTouch){
+       selectIndices(hit>=0?[hit]:[]);
+     }else if(hit>=0){
+       const next=new Set(selectionIndices());
+       if(next.has(hit))next.delete(hit);else next.add(hit);
+       selectIndices([...next]);
+     }
+     syncEditor();draw();
+   }
+ }
  else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='edit'){
    const finishedMovingSelection=tool==='select'&&!window.multiSelectTouch&&
      selectionTouchStart?.id===e.pointerId&&
@@ -96,7 +115,7 @@ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?orig
    // A simple tap keeps the selection available for editing.
    if(finishedMovingSelection)setTouchMode('browse',false);
  }
- else if(!touchConsumed&&gesture?.pan){const last=touchPointers.get(e.pointerId);if(last&&Math.hypot(last.x-gesture.x,last.y-gesture.y)<8){const hit=topAnnotationAt(point(e));if(hit>=0){setTool('select',false);selected=hit;syncEditor();draw()}}}// A deliberate vertical swipe beyond the page edge turns the page;
+// A deliberate vertical swipe beyond the page edge turns the page;
  // ordinary in-page vertical or horizontal movement remains panning.
  let turnPage=0;
  if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){

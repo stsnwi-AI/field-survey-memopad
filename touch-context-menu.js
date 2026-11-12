@@ -98,7 +98,9 @@
    if(!original||original.surveyId)return;
    if(typeof restoreTouchCheckpoint==='function')restoreTouchCheckpoint();
    working=start=dragHandle=dragGroup=null;
-   setTool('select',false);
+   // Do not force the mobile gesture mode into edit just to select.
+   // The single-tap handler handles selection, and double-tap only opens actions.
+   if(tool!=='select')desktopSetTool('select',false);
    const old=window.multiSelectTouch?selectionIndices():[];
    selectIndices(window.multiSelectTouch?[...new Set([...old,hit])]:[hit]);
    syncEditor();draw();
