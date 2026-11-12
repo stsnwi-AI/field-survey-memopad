@@ -37,16 +37,60 @@ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?orig
  if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){
    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
    if(Math.abs(dy)>=65&&Math.abs(dy)>Math.abs(dx)*1.5){
-     // An extra swipe at the current viewport edge turns the page.
-     // A short PDF that does not scroll can be turned directly.
-     if(dy<0&&(gesture.atBottom||gesture.noVerticalScroll)&&page<doc.numPages)turnPage=1;
-     else if(dy>0&&(gesture.atTop||gesture.noVerticalScroll)&&page>1)turnPage=-1;
+     // Use the unclamped intended scroll position, rather than requiring
+     // the gesture to start at the edge. A swipe can reach the edge and
+     // overscroll it in one motion, or start directly at the edge.
+     const maxScroll=Math.max(0,mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight);
+     const intendedTop=gesture.top-dy;
+     const extraBottom=Math.max(0,intendedTop-maxScroll);
+     const extraTop=Math.max(0,-intendedTop);
+     const nearBottom=gesture.atBottom||mobileWorkspace.scrollTop>=maxScroll-12;
+     const nearTop=gesture.atTop||mobileWorkspace.scrollTop<=12;
+     if(dy<0&&(gesture.noVerticalScroll||((nearBottom||extraBottom>=45)&&extraBottom>=45))&&page<doc.numPages)turnPage=1;
+     else if(dy>0&&(gesture.noVerticalScroll||((nearTop||extraTop>=45)&&extraTop>=45))&&page>1)turnPage=-1;
    }
  }
  touchPointers.delete(e.pointerId);if(!touchPointers.size){touchCheckpoint=null;touchConsumed=false;gesture=null}else touchConsumed=true;window.updateTouchSelection();
  if(turnPage){const control=document.getElementById(turnPage>0?'next':'prev');queueMicrotask(()=>{if(control&&!control.disabled)control.click()})}
 }
 canvas.onpointerup=e=>endTouch(e,false);canvas.onpointercancel=e=>endTouch(e,true);
+// The PDF page may occupy less than the scroll viewport. A finger starting
+// on the surrounding workspace (outside the overlay canvas) must also
+// be able to turn pages. Only browse-mode touches use this route.
+let backgroundSwipe=null;
+mobileWorkspace.addEventListener('pointerdown',e=>{
+ if(e.pointerType!=='touch'||e.target===canvas||canvas.contains(e.target)||!doc||rendering||pageBusy||touchMode!=='browse')return;
+ // Never hijack buttons, selectors, file inputs or dialogs in the workspace.
+ if(e.target.closest('button,input,select,textarea,a,label,summary,details,[contenteditable],.bar,#pagePanel'))return;
+ backgroundSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,
+   top:mobileWorkspace.scrollTop,left:mobileWorkspace.scrollLeft,
+   atTop:mobileWorkspace.scrollTop<=12,
+   atBottom:mobileWorkspace.scrollTop>=mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight-12};
+ mobileWorkspace.setPointerCapture(e.pointerId);
+ e.preventDefault();
+},{passive:false});
+mobileWorkspace.addEventListener('pointermove',e=>{
+ if(!backgroundSwipe||e.pointerId!==backgroundSwipe.id)return;
+ e.preventDefault();
+ mobileWorkspace.scrollTop=backgroundSwipe.top+backgroundSwipe.y-e.clientY;
+ mobileWorkspace.scrollLeft=backgroundSwipe.left+backgroundSwipe.x-e.clientX;
+},{passive:false});
+function endBackgroundSwipe(e){
+ if(!backgroundSwipe||e.pointerId!==backgroundSwipe.id)return;
+ const g=backgroundSwipe;backgroundSwipe=null;
+ if(e.type==='pointercancel'||!doc||pageBusy||rendering)return;
+ const dy=e.clientY-g.y,dx=e.clientX-g.x;
+ if(Math.abs(dy)<65||Math.abs(dy)<=Math.abs(dx)*1.5)return;
+ const maxScroll=Math.max(0,mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight);
+ const intendedTop=g.top-dy;
+ let action=null;
+ if(dy<0&&page<doc.numPages&&(maxScroll<=12||intendedTop>=maxScroll+45))action='next';
+ if(dy>0&&page>1&&(maxScroll<=12||intendedTop<=-45))action='prev';
+ if(action)queueMicrotask(()=>{const button=document.getElementById(action);if(button&&!button.disabled)button.click()});
+}
+mobileWorkspace.addEventListener('pointerup',endBackgroundSwipe);
+mobileWorkspace.addEventListener('pointercancel',endBackgroundSwipe);
+
 window.addEventListener('resize',()=>{if(mobileMedia.matches&&window.mobileFitMode&&doc&&!rendering&&!pageBusy)render().catch(e=>say(e.message))});
 // Build first, then share on a fresh explicit click (required by mobile browsers).
 window.invalidateMobileShare=()=>{preparedMobileFile=null;$('sendShare').hidden=true;$('downloadShare').hidden=true};
