@@ -49,7 +49,7 @@ function edgeTurnDirection(g,dx,dy){
    // random page turns when two axes indicate opposite directions equally.
    const vWeight=absY*(maxTop<=12?1:Math.min(1,Math.max(0,overscrollY)/65));
    const hWeight=absX*(maxLeft<=12?1:Math.min(1,Math.max(0,overscrollX)/65));
-   if(Math.abs(vWeight-hWeight)<12&&Math.sign(dy)!==Math.sign(dx))return 0;
+   if(Math.sign(dy)!==Math.sign(dx)&&Math.abs(vWeight-hWeight)<=Math.max(vWeight,hWeight)*.25)return 0;
    if(vWeight>=hWeight)return dy<0?1:-1;
    return dx<0?1:-1;
  }
