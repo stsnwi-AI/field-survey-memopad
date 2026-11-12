@@ -79,7 +79,12 @@ function edgeSwipeStart(x,y){
  return {x,y,left:mobileWorkspace.scrollLeft,top:mobileWorkspace.scrollTop,
    startNearLeft:x<=r.left+56,startNearRight:x>=r.right-56};
 }
-canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&window.fieldStylusMode&&touchMode!=='edit')setTouchMode('edit',false);return originalTouchHandlers.down(e)}if(!doc||pageBusy||pendingTouchDelete)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;if(window.fieldStylusMode||touchMode==='browse'){gesture={pan:true,...edgeSwipeStart(e.clientX,e.clientY)};return}selectionTouchStart=tool==='select'?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
+canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&window.fieldStylusMode&&touchMode!=='edit')setTouchMode('edit',false);return originalTouchHandlers.down(e)}if(!doc||pageBusy||pendingTouchDelete)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;// Finger navigation works anywhere on the PDF, even over objects.
+ // Selection is activated by a tap/double tap, not by holding and dragging.
+ // Explicit drawing tools in manual mode still accept finger strokes.
+ if(window.fieldStylusMode||touchMode==='browse'||(tool==='select'&&!window.multiSelectTouch)){
+   gesture={pan:true,...edgeSwipeStart(e.clientX,e.clientY)};return
+ }selectionTouchStart=tool==='select'?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
 canvas.onpointermove=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.move(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2&&gesture?.distance){const ps=[...touchPointers.values()],distance=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);requestTouchZoom(gesture.scale*distance/gesture.distance,gesture);return}if(touchConsumed)return;if(gesture?.pan){mobileWorkspace.scrollLeft=gesture.left+gesture.x-e.clientX;mobileWorkspace.scrollTop=gesture.top+gesture.y-e.clientY;return}originalTouchHandlers.move(e)};
 function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?originalTouchHandlers.cancel:originalTouchHandlers.up)(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();if(cancelled)restoreTouchCheckpoint();
  else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='edit'){
@@ -91,7 +96,7 @@ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?orig
    // A simple tap keeps the selection available for editing.
    if(finishedMovingSelection)setTouchMode('browse',false);
  }
- else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='browse'&&gesture?.pan){const last=touchPointers.get(e.pointerId);if(last&&Math.hypot(last.x-gesture.x,last.y-gesture.y)<8){const hit=topAnnotationAt(point(e));if(hit>=0){setTool('select',false);selected=hit;syncEditor();draw()}}}// A deliberate vertical swipe beyond the page edge turns the page;
+ else if(!touchConsumed&&gesture?.pan){const last=touchPointers.get(e.pointerId);if(last&&Math.hypot(last.x-gesture.x,last.y-gesture.y)<8){const hit=topAnnotationAt(point(e));if(hit>=0){setTool('select',false);selected=hit;syncEditor();draw()}}}// A deliberate vertical swipe beyond the page edge turns the page;
  // ordinary in-page vertical or horizontal movement remains panning.
  let turnPage=0;
  if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){

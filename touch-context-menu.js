@@ -1,4 +1,4 @@
-/* Ver.1.4.21: touch/pen long-press actions, independent of the settings drawer.
+/* Ver.1.4.23: touch/pen double-tap actions, independent of the settings drawer.
    The original PDF clipboard, touch/pan, annotation and undo handlers remain in place. */
 (() => {
  'use strict';
@@ -6,8 +6,8 @@
  const quickPaste=document.getElementById('floatingPagePaste');
  if(!menu||!quickPaste||!canvas)return;
  const by=id=>document.getElementById(id);
- let hold=null,openFromPointer=null;
- const HOLD_MS=570,DRIFT_PX=12;
+ let press=null,lastTap=null;
+ const DOUBLE_TAP_MS=430,DRIFT_PX=17;
  function hasSurveyPin(payload){
    if(!payload)return false;
    return payload.type==='selection'
@@ -19,7 +19,7 @@
    const payload=readObjectClipboard();
    return Boolean(payload&&!hasSurveyPin(payload)&&validClipboardPayload(payload));
  }
- function hideMenu(){menu.hidden=true;openFromPointer=null}
+ function hideMenu(){menu.hidden=true}
  function returnToFingerNavigation(){
    // The normal setTool('select') in paste and long-press changes touchMode
    // to 'edit'. Restore finger panning once the requested action has ended.
@@ -90,62 +90,54 @@
    updateQuickPaste();
  }
  function clearHold(){if(hold){clearTimeout(hold.timer);hold=null}}
- function finishLongPress(p){
-   if(!hold||hold.id!==p.id||!doc||pageBusy||rendering)return;
-   const hit=hold.index,entry=pageEntries[page-1];
-   if(!entry||entry.id!==hold.pageId||!list()[hit])return;
-   // Cancel any provisional touch edit without committing a pen stroke.
-   if(p.pointerType==='touch'){
-     if(typeof restoreTouchCheckpoint==='function')restoreTouchCheckpoint();
-     if(typeof touchConsumed!=='undefined')touchConsumed=true;
-     if(typeof gesture!=='undefined')gesture=null;
-   }
+ // Two short taps on the SAME ordinary annotation open editing actions.
+ // A long hold never triggers the menu or the browser's text selection.
+ // Survey pins keep their existing double-tap photo/memo dialog instead.
+ function openOnDoubleTap(ev,hit){
+   const original=list()[hit];
+   if(!original||original.surveyId)return;
+   if(typeof restoreTouchCheckpoint==='function')restoreTouchCheckpoint();
    working=start=dragHandle=dragGroup=null;
-   // Switch to selection without modifying the saved annotation.
    setTool('select',false);
-   const prev=window.multiSelectTouch?selectionIndices():[];
-   if(window.multiSelectTouch){
-     selectIndices([...new Set([...prev,hit])]);
-   }else if(!prev.includes(hit))selectIndices([hit]);
-   else selectIndices(prev);
+   const old=window.multiSelectTouch?selectionIndices():[];
+   selectIndices(window.multiSelectTouch?[...new Set([...old,hit])]:[hit]);
    syncEditor();draw();
-   openFromPointer=p.id;
-   showAt(hold.x,hold.y);
-   say('長押しメニュー：切り取り・コピー・複製・貼り付けが使えます。');
+   showAt(ev.clientX,ev.clientY);
+   say('ダブルタップメニュー：切り取り・コピー・複製・貼り付けが使えます。');
  }
  canvas.addEventListener('pointerdown',ev=>{
-   hideMenu();clearHold();
+   if(!menu.hidden)hideMenu();
+   press=null;
    if(!doc||rendering||pageBusy||ev.button!==0||
       !['touch','pen'].includes(ev.pointerType))return;
    if(by('surveyPinMode')?.getAttribute('aria-pressed')==='true')return;
-   const hit=topAnnotationAt(point(ev));
-   // Only long-press existing objects. Empty pages use fixed Paste.
-   if(hit<0)return;
-   const p={id:ev.pointerId,pointerType:ev.pointerType};
-   const state={...p,index:hit,pageId:pageEntries[page-1].id,
-     x:ev.clientX,y:ev.clientY,timer:null};
-   state.timer=setTimeout(()=>{
-     if(hold===state)finishLongPress(p);
-     hold=null;
-   },HOLD_MS);
-   hold=state;
+   const idx=topAnnotationAt(point(ev));
+   if(idx<0||list()[idx]?.surveyId){lastTap=null;return}
+   press={id:ev.pointerId,x:ev.clientX,y:ev.clientY,
+     hit:idx,pageId:pageEntries[page-1].id,moved:false};
  },true);
  canvas.addEventListener('pointermove',ev=>{
-   if(hold&&hold.id===ev.pointerId&&Math.hypot(ev.clientX-hold.x,ev.clientY-hold.y)>DRIFT_PX)clearHold();
-   if(openFromPointer===ev.pointerId){ev.preventDefault();ev.stopImmediatePropagation()}
+   if(press?.id===ev.pointerId&&
+     Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>DRIFT_PX)press.moved=true;
  },true);
- for(const name of ['pointerup','pointercancel']){
-   canvas.addEventListener(name,ev=>{
-     if(hold?.id===ev.pointerId)clearHold();
-     // Do not block original touch pointer cleanup (touchPointers and selection).
-     if(openFromPointer===ev.pointerId){
-       openFromPointer=null;
-       if(ev.pointerType==='touch'&&typeof touchConsumed!=='undefined')touchConsumed=true;
-     }
-   },true);
- }
+ canvas.addEventListener('pointerup',ev=>{
+   const current=press;press=null;
+   if(!current||current.id!==ev.pointerId||current.moved||
+      !doc||pageBusy||rendering)return;
+   if(current.pageId!==pageEntries[page-1].id||
+      Math.hypot(ev.clientX-current.x,ev.clientY-current.y)>DRIFT_PX)return;
+   const hit=topAnnotationAt(point(ev));
+   if(hit!==current.hit||list()[hit]?.surveyId){lastTap=null;return}
+   const now=Date.now();
+   if(lastTap&&lastTap.pageId===current.pageId&&lastTap.hit===hit&&
+      now-lastTap.time<=DOUBLE_TAP_MS&&
+      Math.hypot(ev.clientX-lastTap.x,ev.clientY-lastTap.y)<=26){
+     lastTap=null;openOnDoubleTap(ev,hit);
+   }else lastTap={pageId:current.pageId,hit,time:now,x:ev.clientX,y:ev.clientY};
+ },true);
+ canvas.addEventListener('pointercancel',()=>{press=null;lastTap=null},true);
  canvas.addEventListener('contextmenu',ev=>{
-   if(hold||!menu.hidden){ev.preventDefault()}
+   if(!menu.hidden){ev.preventDefault()}
  },true);
  document.addEventListener('pointerdown',ev=>{
    if(!menu.hidden&&!menu.contains(ev.target))hideMenu();
