@@ -201,7 +201,9 @@ if(o.surveyId||o.shape==='survey-pin'){
  const cx=x+w/2,cy=y+h*.37,r=Math.min(w*.39,h*.36);
  const a=Math.PI*.25,b=Math.PI*.75;
  c.save();c.setLineDash([]);c.beginPath();
- c.arc(cx,cy,r,a,b+Math.PI*2,false);
+ // Take the long arc across the top of the circular head, leaving a
+ // small opening at the bottom for two straight sides to the tip.
+ c.arc(cx,cy,r,a,b,true);
  c.lineTo(cx,y+h);c.closePath();
  c.fillStyle=o.color||'#d12c40';c.strokeStyle='#fff';
  c.lineWidth=Math.max(.9,m*.065);c.fill();c.stroke();
