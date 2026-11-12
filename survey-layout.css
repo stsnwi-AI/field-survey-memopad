@@ -442,3 +442,6 @@ body.survey-horizontal-editor main>.workspace{
  border-radius:10px;font-size:15px;font-weight:700;
  box-shadow:0 5px 17px #12344966;
 }
+
+/* Ver.1.4.23: native text selection must not interfere with double-tap drawing gestures. */
+#overlay{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
