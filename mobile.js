@@ -29,26 +29,48 @@ function restoreTouchCheckpoint(){if(touchCheckpoint){items=touchCheckpoint.item
 function beginPinch(){const ps=[...touchPointers.values()];if(ps.length<2)return;restoreTouchCheckpoint();const center={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};const paper=canvas.getBoundingClientRect();gesture={distance:Math.max(1,Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y)),scale,center,anchorX:(center.x-paper.left)/scale,anchorY:(center.y-paper.top)/scale};touchConsumed=true}
 let queuedZoom=null,zoomLoopRunning=false;
 async function requestTouchZoom(z,anchor){queuedZoom={z,anchor};if(zoomLoopRunning)return;zoomLoopRunning=true;try{while(queuedZoom){const req=queuedZoom;queuedZoom=null;if(pageBusy)continue;if(rendering){queuedZoom=req;await new Promise(r=>setTimeout(r,20));continue}window.mobileFitMode=false;window.setPDFZoom(req.z);await render();if(req.anchor){const paper=canvas.getBoundingClientRect();mobileWorkspace.scrollLeft+=paper.left+req.anchor.anchorX*scale-req.anchor.center.x;mobileWorkspace.scrollTop+=paper.top+req.anchor.anchorY*scale-req.anchor.center.y}}}catch(e){say('表示倍率を変更できませんでした：'+e.message)}finally{zoomLoopRunning=false}}
-canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&window.fieldStylusMode&&touchMode!=='edit')setTouchMode('edit',false);return originalTouchHandlers.down(e)}if(!doc||pageBusy||pendingTouchDelete)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;if(window.fieldStylusMode||touchMode==='browse'){gesture={pan:true,x:e.clientX,y:e.clientY,left:mobileWorkspace.scrollLeft,top:mobileWorkspace.scrollTop,atTop:mobileWorkspace.scrollTop<=12,atBottom:mobileWorkspace.scrollTop>=mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight-12,noVerticalScroll:mobileWorkspace.scrollHeight<=mobileWorkspace.clientHeight+12};return}const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
+// Edge gestures: vertical up / horizontal left advances, down / right goes back.
+// Diagonal gestures qualify when they actually overscroll an outer edge.
+// Central drawing gestures stay panning; only browsing mode enters this route.
+function edgeTurnDirection(g,dx,dy){
+ const absX=Math.abs(dx),absY=Math.abs(dy);
+ const maxTop=Math.max(0,mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight);
+ const maxLeft=Math.max(0,mobileWorkspace.scrollWidth-mobileWorkspace.clientWidth);
+ const overscrollY=dy<0?g.top-dy-maxTop:-g.top+dy;
+ const overscrollX=dx<0?g.left-dx-maxLeft:-g.left+dx;
+ const vertical=absY>=65&&absY>=absX*.35&&
+   (maxTop<=12||overscrollY>=45);
+ const horizontal=absX>=65&&absX>=absY*.35&&
+   (maxLeft>12?overscrollX>=45:
+    (dx<0?g.startNearRight:g.startNearLeft));
+ if(!vertical&&!horizontal)return 0;
+ if(vertical&&horizontal){
+   // At corners, favor the more intentional swipe component. Avoid
+   // random page turns when two axes indicate opposite directions equally.
+   const vWeight=absY*(maxTop<=12?1:Math.min(1,Math.max(0,overscrollY)/65));
+   const hWeight=absX*(maxLeft<=12?1:Math.min(1,Math.max(0,overscrollX)/65));
+   if(Math.abs(vWeight-hWeight)<12&&Math.sign(dy)!==Math.sign(dx))return 0;
+   if(vWeight>=hWeight)return dy<0?1:-1;
+   return dx<0?1:-1;
+ }
+ return vertical?(dy<0?1:-1):(dx<0?1:-1);
+}
+function edgeSwipeStart(x,y){
+ const r=mobileWorkspace.getBoundingClientRect();
+ // Only begin a sideways page turn near the right or left viewport
+ // boundary if the PDF fits fully and horizontal scrolling is impossible.
+ return {x,y,left:mobileWorkspace.scrollLeft,top:mobileWorkspace.scrollTop,
+   startNearLeft:x<=r.left+56,startNearRight:x>=r.right-56};
+}
+canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&window.fieldStylusMode&&touchMode!=='edit')setTouchMode('edit',false);return originalTouchHandlers.down(e)}if(!doc||pageBusy||pendingTouchDelete)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2){beginPinch();return}if(rendering){touchConsumed=true;return}touchConsumed=false;gesture=null;if(window.fieldStylusMode||touchMode==='browse'){gesture={pan:true,...edgeSwipeStart(e.clientX,e.clientY)};return}const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
 canvas.onpointermove=e=>{if(e.pointerType!=='touch')return originalTouchHandlers.move(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touchPointers.size>=2&&gesture?.distance){const ps=[...touchPointers.values()],distance=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);requestTouchZoom(gesture.scale*distance/gesture.distance,gesture);return}if(touchConsumed)return;if(gesture?.pan){mobileWorkspace.scrollLeft=gesture.left+gesture.x-e.clientX;mobileWorkspace.scrollTop=gesture.top+gesture.y-e.clientY;return}originalTouchHandlers.move(e)};
 function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?originalTouchHandlers.cancel:originalTouchHandlers.up)(e);if(!touchPointers.has(e.pointerId))return;e.preventDefault();if(cancelled)restoreTouchCheckpoint();else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='edit')originalTouchHandlers.up(e);else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='browse'&&gesture?.pan){const last=touchPointers.get(e.pointerId);if(last&&Math.hypot(last.x-gesture.x,last.y-gesture.y)<8){const hit=topAnnotationAt(point(e));if(hit>=0){setTool('select',false);selected=hit;syncEditor();draw()}}}// A deliberate vertical swipe beyond the page edge turns the page;
  // ordinary in-page vertical or horizontal movement remains panning.
  let turnPage=0;
  if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){
-   const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
-   if(Math.abs(dy)>=65&&Math.abs(dy)>Math.abs(dx)*1.5){
-     // Use the unclamped intended scroll position, rather than requiring
-     // the gesture to start at the edge. A swipe can reach the edge and
-     // overscroll it in one motion, or start directly at the edge.
-     const maxScroll=Math.max(0,mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight);
-     const intendedTop=gesture.top-dy;
-     const extraBottom=Math.max(0,intendedTop-maxScroll);
-     const extraTop=Math.max(0,-intendedTop);
-     const nearBottom=gesture.atBottom||mobileWorkspace.scrollTop>=maxScroll-12;
-     const nearTop=gesture.atTop||mobileWorkspace.scrollTop<=12;
-     if(dy<0&&(gesture.noVerticalScroll||((nearBottom||extraBottom>=45)&&extraBottom>=45))&&page<doc.numPages)turnPage=1;
-     else if(dy>0&&(gesture.noVerticalScroll||((nearTop||extraTop>=45)&&extraTop>=45))&&page>1)turnPage=-1;
-   }
+   turnPage=edgeTurnDirection(gesture,e.clientX-gesture.x,e.clientY-gesture.y);
+   if(turnPage>0&&page>=doc.numPages)turnPage=0;
+   if(turnPage<0&&page<=1)turnPage=0;
  }
  touchPointers.delete(e.pointerId);if(!touchPointers.size){touchCheckpoint=null;touchConsumed=false;gesture=null}else touchConsumed=true;window.updateTouchSelection();
  if(turnPage){const control=document.getElementById(turnPage>0?'next':'prev');queueMicrotask(()=>{if(control&&!control.disabled)control.click()})}
@@ -62,10 +84,7 @@ mobileWorkspace.addEventListener('pointerdown',e=>{
  if(e.pointerType!=='touch'||e.target===canvas||canvas.contains(e.target)||!doc||rendering||pageBusy||touchMode!=='browse')return;
  // Never hijack buttons, selectors, file inputs or dialogs in the workspace.
  if(e.target.closest('button,input,select,textarea,a,label,summary,details,[contenteditable],.bar,#pagePanel'))return;
- backgroundSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,
-   top:mobileWorkspace.scrollTop,left:mobileWorkspace.scrollLeft,
-   atTop:mobileWorkspace.scrollTop<=12,
-   atBottom:mobileWorkspace.scrollTop>=mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight-12};
+ backgroundSwipe={id:e.pointerId,...edgeSwipeStart(e.clientX,e.clientY)};
  mobileWorkspace.setPointerCapture(e.pointerId);
  e.preventDefault();
 },{passive:false});
@@ -79,13 +98,9 @@ function endBackgroundSwipe(e){
  if(!backgroundSwipe||e.pointerId!==backgroundSwipe.id)return;
  const g=backgroundSwipe;backgroundSwipe=null;
  if(e.type==='pointercancel'||!doc||pageBusy||rendering)return;
- const dy=e.clientY-g.y,dx=e.clientX-g.x;
- if(Math.abs(dy)<65||Math.abs(dy)<=Math.abs(dx)*1.5)return;
- const maxScroll=Math.max(0,mobileWorkspace.scrollHeight-mobileWorkspace.clientHeight);
- const intendedTop=g.top-dy;
- let action=null;
- if(dy<0&&page<doc.numPages&&(maxScroll<=12||intendedTop>=maxScroll+45))action='next';
- if(dy>0&&page>1&&(maxScroll<=12||intendedTop<=-45))action='prev';
+ const direction=edgeTurnDirection(g,e.clientX-g.x,e.clientY-g.y);
+ const action=direction>0&&page<doc.numPages?'next':
+   direction<0&&page>1?'prev':null;
  if(action)queueMicrotask(()=>{const button=document.getElementById(action);if(button&&!button.disabled)button.click()});
 }
 mobileWorkspace.addEventListener('pointerup',endBackgroundSwipe);
