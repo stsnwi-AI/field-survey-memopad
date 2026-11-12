@@ -198,13 +198,16 @@ if(o.surveyId||o.shape==='survey-pin'){
  // A round-headed location pin. The sharp tip is at (x+w/2,y+h),
  // while the number remains in the round head. Older survey circles are
  // rendered as pins too, without changing saved records or surveyId.
- const cx=x+w/2,cy=y+h*.37,r=Math.min(w*.39,h*.36);
+ // Legacy circle markers were centered on the clicked point. Keep their
+ // tip at that original point when displaying them as a pin.
+ const pinY=o.shape==='survey-pin'?y:y-h/2;
+ const cx=x+w/2,cy=pinY+h*.37,r=Math.min(w*.39,h*.36);
  const a=Math.PI*.25,b=Math.PI*.75;
  c.save();c.setLineDash([]);c.beginPath();
  // Take the long arc across the top of the circular head, leaving a
  // small opening at the bottom for two straight sides to the tip.
  c.arc(cx,cy,r,a,b,true);
- c.lineTo(cx,y+h);c.closePath();
+ c.lineTo(cx,pinY+h);c.closePath();
  c.fillStyle=o.color||'#d12c40';c.strokeStyle='#fff';
  c.lineWidth=Math.max(.9,m*.065);c.fill();c.stroke();
  c.font='bold '+Math.max(7,Math.min(r*.95,r*2.0/Math.max(1,String(o.text||'').length*.65)))+'px sans-serif';
