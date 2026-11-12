@@ -14,9 +14,9 @@
   strip.id='fixedPageNav';
   strip.setAttribute('aria-label','固定ページ切り替え・図面の移動');
   const move=document.createElement('button');
-  move.type='button';move.id='panDrawing';move.textContent='✋ 図面移動';
+  move.type='button';move.id='panDrawing';move.textContent='✋ 移動';
   move.setAttribute('aria-pressed','false');
-  move.title='指で図面を上下左右に移動する（編集はパレットから再開）';
+  move.title='指1本で図面を上下左右に移動。上下端から縦スワイプしてページ送り';
   pageControls.classList.add('fixed-page-controls');
   // Keep the existing zoom control in the workspace. Only page turns occupy
   // the permanently visible title row, avoiding overlap with the palette.
@@ -31,7 +31,7 @@
     const browse=typeof touchMode!=='undefined'&&touchMode==='browse';
     move.setAttribute('aria-pressed',String(browse));
     move.classList.toggle('active',browse);
-    move.title=browse?'図面移動中。パレットの編集ツールを選ぶと書き込み再開':'指で図面を移動する';
+    move.title=browse?'図面移動中：指1本で上下左右へ移動。上下端スワイプでページ送り':'図面移動に切り替える';
   }
   move.addEventListener('click',()=>{
     const originalPin=document.getElementById('surveyPinMode');
@@ -39,7 +39,7 @@
     if(typeof setTouchMode==='function')setTouchMode('browse',false);
     workspace.focus({preventScroll:true});
     const status=document.getElementById('status');
-    if(status)status.textContent='図面移動モード：指1本で上下左右に移動、2本指で拡大縮小。編集する場合はパレットのツールを選んでください。';
+    if(status)status.textContent='図面移動中：指1本で上下左右、2本指で拡大縮小。図面の下端で上へスワイプすると次ページ、上端で下へスワイプすると前ページ。';
     syncMove();
   });
   // Editing tools restore the existing editable touch mode.
