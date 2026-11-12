@@ -20,6 +20,20 @@
    return Boolean(payload&&!hasSurveyPin(payload)&&validClipboardPayload(payload));
  }
  function hideMenu(){menu.hidden=true;openFromPointer=null}
+ function returnToFingerNavigation(){
+   // The normal setTool('select') in paste and long-press changes touchMode
+   // to 'edit'. Restore finger panning once the requested action has ended.
+   // Multi-select must remain editable until the user finishes that action.
+   if(!window.multiSelectTouch&&typeof setTouchMode==='function')
+     setTouchMode('browse',false);
+ }
+ function finishMenuAction(){
+   hideMenu();
+   returnToFingerNavigation();
+   window.updateTouchSelection?.();
+   updateQuickPaste();
+ }
+
  function updateQuickPaste(){
    // This button is at document.body level, never inside the conditional #editor
    // or the sliding #surveySettingsPanel.
@@ -44,27 +58,28 @@
    const p=unturnPoint({x:Math.min(e.rotation%180?e.h:e.w,150),
                          y:Math.min(e.rotation%180?e.w:e.h,150)},e);
    pasteCopiedObject(p);
-   hideMenu();updateQuickPaste();
+   finishMenuAction();
  }
  quickPaste.addEventListener('click',pasteOnCurrentPage);
  by('contextPaste').addEventListener('click',pasteOnCurrentPage);
  by('contextCut').addEventListener('click',()=>{
    if(!selectedObjects().length||selectedObjects().some(o=>o?.surveyId))return;
-   copySelectedObject(true);hideMenu();window.updateTouchSelection?.();updateQuickPaste();
+   copySelectedObject(true);finishMenuAction();
  });
  by('contextCopy').addEventListener('click',()=>{
    if(!selectedObjects().length||selectedObjects().some(o=>o?.surveyId))return;
-   copySelectedObject();hideMenu();window.updateTouchSelection?.();updateQuickPaste();
+   copySelectedObject();finishMenuAction();
  });
  by('contextDuplicate').addEventListener('click',()=>{
    if(!selectedObjects().length||selectedObjects().some(o=>o?.surveyId))return;
-   pasteCopiedObject(null,true);hideMenu();window.updateTouchSelection?.();updateQuickPaste();
+   pasteCopiedObject(null,true);finishMenuAction();
  });
  by('contextMulti').addEventListener('click',()=>{
    window.multiSelectTouch=!window.multiSelectTouch;
+   if(!window.multiSelectTouch){finishMenuAction();return}
    window.updateTouchSelection?.();updateQuickPaste();
  });
- by('contextClose').addEventListener('click',hideMenu);
+ by('contextClose').addEventListener('click',finishMenuAction);
  function showAt(x,y){
    updateQuickPaste();
    menu.hidden=false;
