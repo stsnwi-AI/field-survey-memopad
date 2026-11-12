@@ -28,17 +28,30 @@
     dock.style.top = Math.max(topLimit, Math.min(maxTop, y)) + 'px';
     dock.style.right = 'auto';
   }
-  function setMode() {
-    floating = true;
-    dock.classList.add('dock-floating');
-    pin.textContent = '上部に配置';
-    pin.setAttribute('aria-pressed', 'true');
-    pin.title = 'パレットを題名の下へ戻す。移動は「⠿ 移動」をドラッグ';
-    grip.hidden = false;
-    grip.title = 'ここを指やマウスでドラッグして移動';
-    // Always visibly reset to the top-left, rather than reapplying the same
-    // old top-right coordinate and appearing to do nothing.
-    clampPosition(8, headerBottom() + 8);
+  function setMode(nextFloating) {
+    floating = !!nextFloating;
+    dock.classList.toggle('dock-floating', floating);
+    dock.classList.toggle('dock-horizontal', !floating);
+    document.body.classList.toggle('survey-horizontal-editor', !floating);
+    pin.textContent = floating ? '上部に配置' : '自由に移動';
+    pin.setAttribute('aria-pressed', String(!floating));
+    pin.title = floating ? '横一列の編集バーへ戻す' : 'コンパクトな移動パレットに戻す';
+    grip.hidden = !floating;
+    if (floating) {
+      dock.style.removeProperty('width');
+      dock.style.removeProperty('max-width');
+      dock.style.removeProperty('max-height');
+      dock.style.removeProperty('bottom');
+      clampPosition(8, headerBottom() + 8);
+    } else {
+      // Return to a full-width toolbar below the fixed title/navigation row.
+      dock.style.left = '0px';
+      dock.style.right = '0px';
+      dock.style.top = headerBottom() + 'px';
+      dock.style.removeProperty('max-height');
+      dock.style.removeProperty('bottom');
+      dock.style.removeProperty('width');
+    }
   }
   // Hidden by default: accessible again without deleting any original PDF editing tools.
   function setDockVisible(visible) {
@@ -64,8 +77,8 @@
     extra.append(summary, mobileRow);
     settingsPanel.appendChild(extra);
   }
-  pin.addEventListener('click', () => setMode());
-  compact.addEventListener('change', () => { setMode(); });
+  pin.addEventListener('click', () => setMode(!floating));
+  compact.addEventListener('change', () => { if (floating) { const rect=dock.getBoundingClientRect(); clampPosition(rect.left,rect.top); } else setMode(false); });
   let drag = null;
   grip.addEventListener('pointerdown', e => {
     if (!floating || e.button !== 0) return;
@@ -83,9 +96,9 @@
   grip.addEventListener('lostpointercapture', stop);
   grip.addEventListener('pointercancel', stop);
   // Default to the movable palette without waiting for a separate editing-mode switch.
-  setMode();
+  setMode(true);
   window.addEventListener('resize', () => {
-    if(!floating)return;
+    if (!floating) { dock.style.top = headerBottom() + 'px'; return; }
     const rect=dock.getBoundingClientRect();
     clampPosition(rect.left,rect.top);
   });
