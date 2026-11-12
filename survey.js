@@ -13,8 +13,12 @@ const scope=()=>by('surveyNumberScope').value;
 const validPages=()=>new Set((pageEntries||[]).map(e=>e.id));
 const documentPins=()=>{const ids=validPages();return pins().filter(p=>ids.has(p.pageId))};
 function numberFor(pageId){
- const used=documentPins().filter(p=>scope()==='document'||p.pageId===pageId).map(p=>Number(p.o.surveyNumber)).filter(n=>Number.isSafeInteger(n)&&n>0);
- return used.length?Math.max(...used)+1:1;
+ const used=new Set(documentPins().filter(p=>scope()==='document'||p.pageId===pageId)
+  .map(p=>Number(p.o.surveyNumber)).filter(n=>Number.isSafeInteger(n)&&n>0));
+ // Reuse the first missing positive number; do not renumber remaining pins.
+ let candidate=1;
+ while(used.has(candidate))candidate++;
+ return candidate;
 }
 function currentPageNumber(pageId){return (pageEntries||[]).findIndex(e=>e.id===pageId)+1}
 function renumberAll(){
@@ -61,7 +65,7 @@ canvas.addEventListener('pointerup',e=>{
 },true);
 function openRecord(id,pg){if(storageLoading||activeStorageKey!==documentStorageKey()){status('この図面の記録を読み込み中です。');return}const found=documentPins().find(v=>v.o.surveyId===id);if(!found){status('番号ピンがありません');return}activeId=id;records[id] ||= {memo:'',instruction:'',photos:[]};const r=records[id];showSurveyDialog();by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0');by('surveyMemo').value=r.memo||'';by('surveyInstruction').value=r.instruction||'';renderPhotos();renderList(); if(pg!==getPage()){status('記録を表示しました。該当図面へはPDF編集のページ切替で移動してください。')}else status('調査記録を編集中');}
 function renderPhotos(){const b=by('surveyThumbnails');b.textContent='';if(!activeId)return;const r=records[activeId];(r?.photos||[]).forEach((photo,i)=>{const w=document.createElement('div');w.className='survey-photo';const im=document.createElement('img');im.src=photo.data;im.alt='調査写真 '+(i+1);const del=document.createElement('button');del.textContent='写真を削除';del.onclick=()=>{if(!confirm('この写真を削除しますか？'))return;r.photos.splice(i,1);queueSave();renderPhotos();renderList()};w.append(im,del);b.append(w)})}
-function markPin(x,y){if(!activeStorageKey||activeStorageKey!==documentStorageKey()||storageLoading){status('この図面の調査記録を準備中です。再操作してください。');return}if(!doc||!getPage()||rendering||pageBusy){status('先にPDF図面を開いてください');return}const id=crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);const n=numberFor(getPage());snapshot();const o={type:'stamp',x:x-12,y:y-12,w:24,h:24,shape:'circle',text:String(n),color:'#d12c40',surveyId:id,surveyNumber:n};list().push(o);records[id]={memo:'',instruction:'',photos:[]};setTool('select',false);selectIndices([list().length-1]);draw();queueSave();renderList();status('調査番号 No.'+String(n).padStart(3,'0')+' を追加しました。PDF保存時には番号印も図面に出力されます。')}
+function markPin(x,y){if(!activeStorageKey||activeStorageKey!==documentStorageKey()||storageLoading){status('この図面の調査記録を準備中です。再操作してください。');return}if(!doc||!getPage()||rendering||pageBusy){status('先にPDF図面を開いてください');return}const id=crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);const n=numberFor(getPage());snapshot();const o={type:'stamp',x:x-12,y:y-24,w:24,h:24,shape:'survey-pin',text:String(n),color:'#d12c40',surveyId:id,surveyNumber:n};list().push(o);records[id]={memo:'',instruction:'',photos:[]};setTool('select',false);selectIndices([list().length-1]);draw();queueSave();renderList();status('調査番号 No.'+String(n).padStart(3,'0')+' を追加しました。PDF保存時には番号印も図面に出力されます。')}
 // Right-click (mouse) / one-finger tap (touch) while placement mode is active.
 // Continuous mode keeps placement enabled; other editing interactions stay unchanged when it is OFF.
 let lastTouchPlacement=0;
