@@ -194,6 +194,22 @@ function paintLineEnd(c,x,y,a,cap){if(cap==='none')return;c.beginPath();if(cap==
 
 function paintStamp(c,o){
 const w=o.w,h=o.h,x=o.x,y=o.y,m=Math.min(w,h),edge=Math.max(.7,m*.035);c.setLineDash([]);c.lineWidth=edge;
+if(o.surveyId||o.shape==='survey-pin'){
+ // A round-headed location pin. The sharp tip is at (x+w/2,y+h),
+ // while the number remains in the round head. Older survey circles are
+ // rendered as pins too, without changing saved records or surveyId.
+ const cx=x+w/2,cy=y+h*.37,r=Math.min(w*.39,h*.36);
+ const a=Math.PI*.25,b=Math.PI*.75;
+ c.save();c.setLineDash([]);c.beginPath();
+ c.arc(cx,cy,r,a,b+Math.PI*2,false);
+ c.lineTo(cx,y+h);c.closePath();
+ c.fillStyle=o.color||'#d12c40';c.strokeStyle='#fff';
+ c.lineWidth=Math.max(.9,m*.065);c.fill();c.stroke();
+ c.font='bold '+Math.max(7,Math.min(r*.95,r*2.0/Math.max(1,String(o.text||'').length*.65)))+'px sans-serif';
+ c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+ c.fillText(String(o.text||''),cx,cy+Math.min(1,h*.03),r*1.78);
+ c.restore();return;
+}
 if(o.shape==='circle'){for(const inset of [edge,edge*3]){c.beginPath();c.ellipse(x+w/2,y+h/2,Math.max(.1,w/2-inset),Math.max(.1,h/2-inset),0,0,Math.PI*2);c.stroke()}}
 else{for(const inset of [edge,edge*3])c.strokeRect(x+inset,y+inset,Math.max(.1,w-2*inset),Math.max(.1,h-2*inset))}
 c.font='bold '+Math.min(h*.49,w*.76/Math.max(1,[...o.text].length))+'px serif';c.textAlign='center';c.textBaseline='middle';c.fillText(o.text,x+w/2,y+h/2,w*.76);
