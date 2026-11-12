@@ -413,3 +413,32 @@ body.survey-horizontal-editor main>.workspace{
  #fixedPageNav #panDrawing::after{content:"✋";font-size:19px!important}
  #surveyBuildVersion{font-size:10px;padding:4px 6px}
 }
+
+/* Ver.1.4.21: independent finger/pen long-press menu. Never nest in the settings drawer. */
+#touchContextMenu{
+ position:fixed;z-index:120;box-sizing:border-box;
+ width:min(240px,calc(100vw - 16px));
+ padding:8px;border:1px solid #8da8b5;border-radius:11px;
+ background:#f9fcfd;color:#183b4e;
+ box-shadow:0 10px 30px #13344d55;
+ display:grid;gap:5px;
+}
+#touchContextMenu[hidden],#floatingPagePaste[hidden]{display:none!important}
+#touchContextMenu .touch-context-title{
+ font-size:12px;font-weight:700;padding:6px 8px;
+}
+#touchContextMenu button{
+ display:block;box-sizing:border-box;min-height:44px;width:100%;
+ text-align:left;padding:9px 11px;font-weight:650;font-size:14px;
+ border-radius:7px;color:#173c50;background:#edf4f6;border:1px solid #ccdae1;
+}
+#touchContextMenu button:disabled{opacity:.45}
+#touchContextMenu #contextClose{background:#f0f0ef}
+#floatingPagePaste{
+ position:fixed;z-index:110;left:max(12px,env(safe-area-inset-left));
+ bottom:calc(max(12px,env(safe-area-inset-bottom)) + 64px);
+ min-height:48px;padding:10px 15px;
+ color:#fff;background:#205a73;border:2px solid #f6b859;
+ border-radius:10px;font-size:15px;font-weight:700;
+ box-shadow:0 5px 17px #12344966;
+}
