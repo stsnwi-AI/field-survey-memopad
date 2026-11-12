@@ -402,8 +402,13 @@ body.survey-horizontal-editor main>.workspace{
 }
 @media(max-width:600px){
  #fixedPageNav #panDrawing{
-  display:inline-flex!important;min-width:40px!important;max-width:40px!important;
-  padding:4px!important;font-size:0!important;
+  display:inline-flex!important;position:fixed!important;
+  right:max(8px,env(safe-area-inset-right))!important;
+  bottom:max(46px,calc(env(safe-area-inset-bottom) + 42px))!important;
+  z-index:76!important;
+  min-width:48px!important;max-width:48px!important;min-height:48px!important;
+  padding:5px!important;font-size:0!important;
+  box-shadow:0 3px 12px #102b3b66!important;
  }
  #fixedPageNav #panDrawing::after{content:"✋";font-size:19px!important}
  #surveyBuildVersion{font-size:10px;padding:4px 6px}
