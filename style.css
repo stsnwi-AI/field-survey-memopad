@@ -133,3 +133,17 @@
 #surveyToolDock.dock-floating .dock-grip{margin-left:auto}
 #annotationTools>h2{display:none!important}
 @media(max-width:750px){#surveyToolDock{position:sticky;top:0;padding:5px 7px;z-index:15;flex-wrap:wrap}#surveyToolDock .dock-tools{flex:1 1 100%;order:3}#surveyToolDock .dock-mode{display:none}#surveyToolDock .dock-title{font-size:11px}#surveyToolDock #tools button{min-height:42px;min-width:70px;font-size:10px}body:not(.mobile-tools-open) #surveyToolDock .dock-tools{display:none}body.mobile-tools-open #surveyToolDock .dock-tools{display:block}}
+
+/* Ver.1.4.27: floating movable text addition input, independent of the page annotation layer. */
+#textFloatWindow[hidden]{display:none!important}
+#textFloatWindow{position:fixed;z-index:1400;top:clamp(74px,19vh,210px);left:clamp(12px,15vw,280px);width:min(325px,calc(100vw - 24px));height:210px;min-width:220px;min-height:160px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);box-sizing:border-box;border:2px solid #7b97b0;border-radius:12px;background:#fff;box-shadow:0 12px 32px #1237;display:flex;flex-direction:column;overflow:hidden}
+#textFloatGrip{display:flex;justify-content:space-between;align-items:center;background:#e7f1fa;color:#1b344b;padding:7px 9px;min-height:39px;box-sizing:border-box;font-weight:700;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#textFloatGrip:active{cursor:grabbing}
+#textFloatClose{font-size:18px;min-width:40px;min-height:32px;border:1px solid #9aaab9;border-radius:6px;background:#fff;color:#233746;cursor:pointer}
+#textFloatWindow #newTextRow{display:flex;flex-direction:column;flex:1;min-height:0;margin:5px 10px 0;font-weight:600;gap:4px}
+#textFloatWindow #newTextRow[hidden]{display:none!important}
+#textFloatWindow #text{width:100%;min-height:48px;height:100%;flex:1;resize:none;box-sizing:border-box;display:block;font-size:16px;line-height:1.45;touch-action:manipulation}
+#textFloatWindow .textFloatHint{margin:3px 32px 8px 10px;font-size:12px;color:#4a5f71}
+#textFloatResize{position:absolute;right:0;bottom:0;width:32px;height:32px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 52%,#8da7bd 52%,#8da7bd 58%,transparent 58%,transparent 68%,#8da7bd 68%,#8da7bd 74%,transparent 74%)}
+#textFloatResize:focus-visible{outline:3px solid #156d9b}
+@media(max-width:420px){#textFloatWindow{top:90px;left:12px;width:min(290px,calc(100vw - 24px))}}
