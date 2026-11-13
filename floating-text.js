@@ -50,6 +50,7 @@
     target.addEventListener('pointerup',finishPointer);
     target.addEventListener('pointercancel',finishPointer);
   }
+  close.addEventListener('pointerdown',e=>e.stopPropagation());
   close.addEventListener('click',()=>{if(typeof setTool==='function')setTool('select',false);else panel.hidden=true;});
   // The floating panel is entirely separate from the PDF canvas and its pointer handlers.
   window.addEventListener('resize',()=>{if(!panel.hidden)confine()},{passive:true});
