@@ -445,3 +445,22 @@ body.survey-horizontal-editor main>.workspace{
 
 /* Ver.1.4.23: native text selection must not interfere with double-tap drawing gestures. */
 #overlay{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+
+/* Ver.1.4.26: photograph enlargement and desktop record navigation */
+.survey-photo-preview{display:block!important;width:100%;padding:0!important;border:0!important;background:transparent!important;cursor:zoom-in!important}
+.survey-photo-preview:focus-visible{outline:3px solid #1c6b9d}
+#surveyThumbnails .survey-photo-preview img{width:100%;object-fit:contain}
+.survey-photo-actions{display:flex;gap:3px;justify-content:space-between}
+#surveyThumbnails .survey-photo-actions button{margin:2px 0;padding:6px;min-width:30px}
+#surveyThumbnails .survey-photo-delete{color:#a12727}
+.survey-photo-viewer{border:0;border-radius:12px;padding:12px;background:#152b39;color:white;width:min(96vw,1100px);max-width:96vw;max-height:95dvh;box-sizing:border-box;box-shadow:0 12px 48px #0009}
+.survey-photo-viewer::backdrop{background:#000c}
+.survey-viewer-head,.survey-viewer-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.survey-viewer-head{margin-bottom:8px;overflow-wrap:anywhere}
+.survey-photo-viewer button{min-height:42px;padding:8px 12px;color:#132a38;background:#f4f9fc;border:1px solid #c9d9e1;border-radius:8px;cursor:pointer}
+#surveyViewerImage{display:block;max-width:100%;max-height:calc(95dvh - 137px);margin:0 auto 12px;object-fit:contain;touch-action:pinch-zoom}
+.survey-viewer-actions{justify-content:center}
+.survey-record-navigation{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 12px}
+.survey-record-navigation button{min-height:43px;padding:7px 10px;border:1px solid #aab8cc;border-radius:7px;background:#fff}
+.survey-record-navigation span{font-size:13px;white-space:nowrap}
+@media(min-width:950px){.survey-dialog{width:min(850px,90vw)!important;max-width:90vw!important}.survey-dialog #surveyDetail{max-height:calc(88vh - 80px)!important}#surveyThumbnails .survey-photo{width:165px;max-width:32%}}
