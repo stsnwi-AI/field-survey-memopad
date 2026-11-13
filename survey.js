@@ -63,8 +63,65 @@ canvas.addEventListener('pointerup',e=>{
   recentTap=null;openRecord(pin.surveyId,getPage());
  }else recentTap={id:pin.surveyId,time:now,x:p.x,y:p.y};
 },true);
-function openRecord(id,pg){if(storageLoading||activeStorageKey!==documentStorageKey()){status('この図面の記録を読み込み中です。');return}const found=documentPins().find(v=>v.o.surveyId===id);if(!found){status('番号ピンがありません');return}activeId=id;records[id] ||= {memo:'',instruction:'',photos:[]};const r=records[id];showSurveyDialog();by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0');by('surveyMemo').value=r.memo||'';by('surveyInstruction').value=r.instruction||'';renderPhotos();renderList(); if(pg!==getPage()){status('記録を表示しました。該当図面へはPDF編集のページ切替で移動してください。')}else status('調査記録を編集中');}
-function renderPhotos(){const b=by('surveyThumbnails');b.textContent='';if(!activeId)return;const r=records[activeId];(r?.photos||[]).forEach((photo,i)=>{const w=document.createElement('div');w.className='survey-photo';const im=document.createElement('img');im.src=photo.data;im.alt='調査写真 '+(i+1);const del=document.createElement('button');del.textContent='写真を削除';del.onclick=()=>{if(!confirm('この写真を削除しますか？'))return;r.photos.splice(i,1);queueSave();renderPhotos();renderList()};w.append(im,del);b.append(w)})}
+function openRecord(id,pg){if(storageLoading||activeStorageKey!==documentStorageKey()){status('この図面の記録を読み込み中です。');return}const found=documentPins().find(v=>v.o.surveyId===id);if(!found){status('番号ピンがありません');return}activeId=id;records[id] ||= {memo:'',instruction:'',photos:[]};const r=records[id];showSurveyDialog();by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0');by('surveyMemo').value=r.memo||'';by('surveyInstruction').value=r.instruction||'';renderPhotos();renderList();updateRecordNavigation(); if(pg!==getPage()){status('記録を表示しました。該当図面へはPDF編集のページ切替で移動してください。')}else status('調査記録を編集中');}
+// Ver.1.4.26: photo preview does not change the survey records; deletion remains separate.
+const photoViewer=document.createElement('dialog');
+photoViewer.id='surveyPhotoViewer';photoViewer.className='survey-photo-viewer';
+photoViewer.setAttribute('aria-label','調査写真の拡大表示');
+photoViewer.innerHTML='<div class="survey-viewer-head"><span id="surveyViewerTitle"></span><button id="surveyViewerClose" type="button">閉じる ×</button></div><img id="surveyViewerImage" alt="調査写真の拡大表示"><div class="survey-viewer-actions"><button type="button" id="surveyViewerPrev">前の写真</button><button type="button" id="surveyViewerNext">次の写真</button></div>';
+document.body.append(photoViewer);
+let viewerIndex=0,viewerRecordId=null;
+function closePhotoViewer(){if(photoViewer.open)photoViewer.close();viewerRecordId=null}
+function showPhotoViewer(id,index){
+ const photos=records[id]?.photos||[];
+ if(!photos.length){closePhotoViewer();return}
+ viewerRecordId=id;viewerIndex=(index+photos.length)%photos.length;
+ const photo=photos[viewerIndex];
+ // Never load arbitrary URLs from imported data.
+ if(!/^data:image\/(?:png|jpeg|webp|gif|heic|heif|avif|bmp);base64,[A-Za-z0-9+/=]+$/.test(photo.data||'')){closePhotoViewer();status('安全な写真データではないため表示できません');return}
+ by('surveyViewerImage').src=photo.data;
+ by('surveyViewerTitle').textContent='写真 '+(viewerIndex+1)+' / '+photos.length+(photo.name?'　'+safeName(photo.name):'');
+ by('surveyViewerPrev').disabled=photos.length<2;by('surveyViewerNext').disabled=photos.length<2;
+ if(!photoViewer.open)photoViewer.showModal();
+}
+by('surveyViewerClose').onclick=closePhotoViewer;
+by('surveyViewerPrev').onclick=()=>showPhotoViewer(viewerRecordId,viewerIndex-1);
+by('surveyViewerNext').onclick=()=>showPhotoViewer(viewerRecordId,viewerIndex+1);
+photoViewer.addEventListener('click',e=>{if(e.target===photoViewer)closePhotoViewer()});
+photoViewer.addEventListener('close',()=>{viewerRecordId=null;by('surveyViewerImage').removeAttribute('src')});
+// Closing/reloading the record must not leave an unrelated enlarged photo on screen.
+surveyDialog.addEventListener('close',closePhotoViewer);
+function renderPhotos(){
+ const b=by('surveyThumbnails');b.textContent='';if(!activeId)return;
+ const id=activeId,r=records[id];(r?.photos||[]).forEach((photo,i)=>{
+  const w=document.createElement('div');w.className='survey-photo';
+  const preview=document.createElement('button');preview.type='button';preview.className='survey-photo-preview';
+  preview.title='写真を拡大表示';preview.setAttribute('aria-label','調査写真 '+(i+1)+' を拡大表示');
+  const im=document.createElement('img');im.src=photo.data;im.alt='調査写真 '+(i+1);
+  preview.append(im);preview.onclick=()=>showPhotoViewer(id,i);
+  const actions=document.createElement('div');actions.className='survey-photo-actions';
+  const left=document.createElement('button');left.type='button';left.textContent='←';left.title='写真を前へ';left.disabled=i===0;
+  left.onclick=()=>{[r.photos[i-1],r.photos[i]]=[r.photos[i],r.photos[i-1]];queueSave();renderPhotos()};
+  const right=document.createElement('button');right.type='button';right.textContent='→';right.title='写真を後へ';right.disabled=i===r.photos.length-1;
+  right.onclick=()=>{[r.photos[i],r.photos[i+1]]=[r.photos[i+1],r.photos[i]];queueSave();renderPhotos()};
+  const del=document.createElement('button');del.type='button';del.textContent='削除';del.className='survey-photo-delete';
+  del.onclick=()=>{if(!confirm('この写真を削除しますか？'))return;closePhotoViewer();r.photos.splice(i,1);queueSave();renderPhotos();renderList()};
+  actions.append(left,right,del);w.append(preview,actions);b.append(w)
+ })
+}
+// PC editing: navigate survey records in page/number order without closing the dialog.
+const recordNavigation=document.createElement('nav');recordNavigation.className='survey-record-navigation';
+recordNavigation.setAttribute('aria-label','調査番号の切り替え');
+recordNavigation.innerHTML='<button type="button" id="surveyRecordPrev">← 前の番号</button><span id="surveyRecordPosition" role="status"></span><button type="button" id="surveyRecordNext">次の番号 →</button>';
+by('surveyPinTitle').after(recordNavigation);
+function sortedRecords(){return documentPins().sort((a,b)=>currentPageNumber(a.pageId)-currentPageNumber(b.pageId)||Number(a.o.surveyNumber)-Number(b.o.surveyNumber))}
+function updateRecordNavigation(){const entries=sortedRecords();const index=entries.findIndex(p=>p.o.surveyId===activeId);
+ by('surveyRecordPrev').disabled=index<=0;by('surveyRecordNext').disabled=index<0||index>=entries.length-1;
+ by('surveyRecordPosition').textContent=index>=0?(index+1)+' / '+entries.length+' 件':'';
+}
+function moveRecord(direction){const entries=sortedRecords(),i=entries.findIndex(p=>p.o.surveyId===activeId),next=entries[i+direction];if(next){closePhotoViewer();openRecord(next.o.surveyId,next.pageId)}}
+by('surveyRecordPrev').onclick=()=>moveRecord(-1);by('surveyRecordNext').onclick=()=>moveRecord(1);
+
 function markPin(x,y){if(!activeStorageKey||activeStorageKey!==documentStorageKey()||storageLoading){status('この図面の調査記録を準備中です。再操作してください。');return}if(!doc||!getPage()||rendering||pageBusy){status('先にPDF図面を開いてください');return}const id=crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);const n=numberFor(getPage());snapshot();const o={type:'stamp',x:x-12,y:y-24,w:24,h:24,shape:'survey-pin',text:String(n),color:'#d12c40',surveyId:id,surveyNumber:n};list().push(o);records[id]={memo:'',instruction:'',photos:[]};setTool('select',false);selectIndices([list().length-1]);draw();queueSave();renderList();status('調査番号 No.'+String(n).padStart(3,'0')+' を追加しました。PDF保存時には番号印も図面に出力されます。')}
 // Right-click (mouse) / one-finger tap (touch) while placement mode is active.
 // Continuous mode keeps placement enabled; other editing interactions stay unchanged when it is OFF.
