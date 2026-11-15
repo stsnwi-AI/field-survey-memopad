@@ -362,6 +362,29 @@ window.surveyPDFLoaded=async(project)=>{
  status('旧形式のPDFを読み込みました。写真・メモが端末に残っている場合は旧バックアップから復元できます。');
 };
 
+// v1.4.28 Excel photo ledger. Read-only export; never mutates PDF, photos or survey records.
+by('surveyExcelExport').onclick=async()=>{
+ const btn=by('surveyExcelExport');
+ if(btn.disabled)return;
+ if(!doc||storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
+  status('写真台帳の出力前に編集済みPDFを開き、調査記録の読み込み完了を確認してください。');return;
+ }
+ if(typeof window.fieldSurveyExcelExport!=='function'){status('Excel出力の準備ができていません。画面を再読み込みしてください。');return}
+ const ordered=documentPins().sort((a,b)=>currentPageNumber(a.pageId)-currentPageNumber(b.pageId)||Number(a.o.surveyNumber)-Number(b.o.surveyNumber));
+ if(!ordered.length){status('調査番号がないため、Excel報告書を作成できません。');return}
+ btn.disabled=true;status('現場調査写真台帳を作成しています…');
+ try{
+  const entries=ordered.map(({pageId,o})=>{
+   const r=records[o.surveyId]||{};
+   return {no:o.surveyNumber,page:currentPageNumber(pageId),memo:r.memo||'',instruction:r.instruction||'',
+    photos:(r.photos||[]).map(p=>({data:p.data,name:p.name||''}))};
+  });
+  await window.fieldSurveyExcelExport({siteId,entries});
+  status('Excel写真台帳を出力しました。元のPDFや調査記録は変更していません。');
+ }catch(err){console.error('Excel photo ledger export failed:',err);status('Excel写真台帳を出力できませんでした：'+err.message)}
+ finally{btn.disabled=false}
+};
+
 // Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
 setInterval(()=>{if(!window.__surveyPdfLoading&&!bundleBusy&&documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
 try{siteId=validateSite(localStorage.getItem(PREFIX+':siteId'))||''}catch(e){siteId=''}siteField.value=siteId;siteLabel();
