@@ -653,3 +653,37 @@ body>#dockEditSettings #editor[hidden]{display:none!important}
  body>#dockEditSettings .palette{grid-template-columns:repeat(6,minmax(0,1fr))!important}
  body>#dockEditSettings .swatch{width:32px!important;height:32px!important}
 }
+
+/* v1.4.38 compact freely movable editor: original inputs/listeners remain intact. */
+body>#dockEditSettings{
+ padding:6px 9px!important;border-radius:8px!important;
+ max-width:calc(100vw - 16px)!important;
+}
+body>#dockEditSettings>summary{
+ min-height:36px!important;font-size:12px!important;
+ padding:4px 6px!important;top:-6px!important;
+ cursor:grab!important;touch-action:none!important;
+ user-select:none!important;-webkit-user-select:none!important;
+ border-bottom:1px solid #d4e3ed!important;
+}
+body>#dockEditSettings>summary:active{cursor:grabbing!important}
+body>#dockEditSettings .palette{
+ grid-template-columns:repeat(8,minmax(0,1fr))!important;
+ gap:5px!important;margin:6px 0 8px!important;
+}
+body>#dockEditSettings .swatch{
+ width:29px!important;height:29px!important;min-width:0!important;
+}
+body>#dockEditSettings .settings,
+body>#dockEditSettings .text-style-controls{
+ margin:5px 0!important;gap:4px!important;
+}
+body>#dockEditSettings #editor{
+ padding:7px!important;margin:5px 0!important;
+}
+@media(max-width:420px){
+ body>#dockEditSettings .palette{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:4px!important;
+ }
+ body>#dockEditSettings .swatch{width:28px!important;height:28px!important}
+}
