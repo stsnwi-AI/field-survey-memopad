@@ -41,6 +41,72 @@ function hideSurveyDialog(){if(surveyDialog.open)surveyDialog.close()}
 surveyDialog.addEventListener('close',()=>{activeId=null;renderList()});
 by('surveyDialogX').onclick=()=>hideSurveyDialog();
 surveyDialog.addEventListener('click',e=>{if(e.target===surveyDialog)hideSurveyDialog()});
+// Recognized stylus: hold an existing survey pin for 650ms to open its record.
+// The hit pin consumes ONLY that pen contact, so the editor cannot accidentally
+// drag/resize the pin while it waits. Finger double-tap and mouse double-click stay intact.
+const PEN_PIN_HOLD_MS=650,PEN_PIN_MOVE_PX=12;
+let penPinHold=null,penPinSuppressClickUntil=0;
+function clearPenPinHold(){
+ if(penPinHold?.timer)clearTimeout(penPinHold.timer);
+ penPinHold=null;
+}
+canvas.addEventListener('pointerdown',e=>{
+ if(e.pointerType!=='pen'||e.button!==0||!e.isPrimary||!doc||rendering||pageBusy)return;
+ const p=point(e);
+ const hit=[...list().keys()].reverse().find(i=>list()[i]?.surveyId&&hitAnnotation(list()[i],p));
+ if(hit===undefined)return;
+ const pin=list()[hit],pageId=getPage();
+ clearPenPinHold();
+ const state={id:e.pointerId,x:e.clientX,y:e.clientY,pageId,pinId:pin.surveyId,hit,timer:null,opened:false,moved:false};
+ penPinHold=state;
+ state.timer=setTimeout(()=>{
+  if(penPinHold!==state||state.moved||!doc||rendering||pageBusy||getPage()!==state.pageId)return;
+  const current=list().find(o=>o.surveyId===state.pinId);
+  if(!current)return;
+  state.opened=true;
+  penPinSuppressClickUntil=Date.now()+1000;
+  // Do not modify the selected pin's geometry or the PDF undo history.
+  setTool('select',false);
+  const index=list().indexOf(current);
+  selectIndices([index]);syncEditor();draw();
+  openRecord(state.pinId,state.pageId);
+ },PEN_PIN_HOLD_MS);
+ canvas.setPointerCapture(e.pointerId);
+ e.preventDefault();e.stopImmediatePropagation();
+},true);
+canvas.addEventListener('pointermove',e=>{
+ const state=penPinHold;
+ if(!state||e.pointerId!==state.id)return;
+ if(Math.hypot(e.clientX-state.x,e.clientY-state.y)>PEN_PIN_MOVE_PX){
+  state.moved=true;clearTimeout(state.timer);
+ }
+ e.preventDefault();e.stopImmediatePropagation();
+},true);
+canvas.addEventListener('pointerup',e=>{
+ const state=penPinHold;
+ if(!state||e.pointerId!==state.id)return;
+ if(!state.opened&&!state.moved&&getPage()===state.pageId){
+  const index=list().findIndex(o=>o.surveyId===state.pinId);
+  if(index>=0){setTool('select',false);selectIndices([index]);syncEditor();draw();}
+ }
+ clearPenPinHold();
+ e.preventDefault();e.stopImmediatePropagation();
+},true);
+canvas.addEventListener('pointercancel',e=>{
+ if(penPinHold?.id!==e.pointerId)return;
+ clearPenPinHold();
+ e.preventDefault();e.stopImmediatePropagation();
+},true);
+canvas.addEventListener('contextmenu',e=>{
+ if(penPinHold||Date.now()<penPinSuppressClickUntil){
+  e.preventDefault();e.stopImmediatePropagation();
+ }
+},true);
+canvas.addEventListener('click',e=>{
+ if(Date.now()<penPinSuppressClickUntil){
+  e.preventDefault();e.stopImmediatePropagation();
+ }
+},true);
 // Double click directly on an existing survey stamp opens its photo/comment dialog.
 // Capture phase preempts the original text-editor double click handler for survey pins only.
 canvas.addEventListener('dblclick',e=>{
