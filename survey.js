@@ -87,7 +87,7 @@ canvas.addEventListener('pointerup',e=>{
  if(!state||e.pointerId!==state.id)return;
  if(!state.opened&&!state.moved&&getPage()===state.pageId){
   const index=list().findIndex(o=>o.surveyId===state.pinId);
-  if(index>=0){setTool('select',false);selectIndices([index]);syncEditor();draw();}
+  if(index>=0){setTool('select',false);selectIndices([index]);syncEditor();draw();canvas.dispatchEvent(new Event('survey-pin-selected'));}
  }
  clearPenPinHold();
  e.preventDefault();e.stopImmediatePropagation();
