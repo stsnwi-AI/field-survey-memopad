@@ -123,6 +123,7 @@
   // The survey-pin stylus hold handler consumes its pointer events.
   // Its short-tap path announces the completed selection separately.
   canvas?.addEventListener('survey-pin-selected',()=>queueMicrotask(openSelectedPalette));
+  canvas?.addEventListener('annotation-pen-selected',()=>queueMicrotask(openSelectedPalette));
   const surveyDialog=document.getElementById('surveyDialog');
   if(surveyDialog)new MutationObserver(()=>{
     if(surveyDialog.open)showEditSettings(false);
