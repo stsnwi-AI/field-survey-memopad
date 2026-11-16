@@ -111,11 +111,11 @@ const inlineLineProperties=document.createElement('section');
 inlineLineProperties.id='inlineLineProperties';
 inlineLineProperties.setAttribute('aria-label','選択した線・図形の編集');
 inlineLineProperties.innerHTML=
- '<div class="inline-line-heading"><strong>線・背景・透明度</strong><small id="inlineLineStatus">線・図形を選ぶと編集できます</small></div>'+
+ '<div class="inline-line-heading"><strong>線・背景・濃さ</strong><small id="inlineLineStatus">線・図形・マークを選ぶと編集できます</small></div>'+
  '<div class="inline-line-grid">'+
  '<label>線の色<input id="inlineStroke" type="color" value="#e59a19"></label>'+
  '<label>線種<select id="inlineLineStyle"><option value="">混在</option><option value="solid">実線</option><option value="dashed">破線</option><option value="dotted">点線</option></select></label>'+
- '<label>全体の透明度<input id="inlineOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
+ '<label>色の濃さ（％）<input id="inlineOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
  '<label>背景色<input id="inlineFill" type="color" value="#ffffff"></label>'+
  '<label>背景の透明度<input id="inlineFillOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
  '<label class="inline-fill-clear"><input id="inlineNoFill" type="checkbox">背景なし</label>'+
@@ -123,21 +123,24 @@ inlineLineProperties.innerHTML=
 // The normal color chooser remains first; move these controls with that chooser.
 document.querySelector('#annotationTools > .palette')?.after(inlineLineProperties);
 const inlineFields=['inlineStroke','inlineLineStyle','inlineOpacity','inlineFill','inlineFillOpacity','inlineNoFill'].map(id=>document.getElementById(id));
-function inlineTargets(){return selectedObjects().filter(o=>lineTypes.includes(o.type))}
+function inlineTargets(){return selectedObjects().filter(o=>lineTypes.includes(o.type)||o.type==='stamp')}
 function syncInlineLineProperties(){
  const objects=inlineTargets(),shapes=objects.filter(o=>['rect','ellipse'].includes(o.type));
+ const lines=objects.filter(o=>lineTypes.includes(o.type));
  const active=objects.length>0&&!pageBusy&&!rendering;
- document.getElementById('inlineLineStatus').textContent=active?objects.length+'件を編集中':'線・図形を選ぶと編集できます';
+ document.getElementById('inlineLineStatus').textContent=active
+  ?objects.length+'件を編集中':'線・図形・マークを選ぶと編集できます';
  for(const control of inlineFields)control.disabled=!active;
+ for(const id of ['inlineStroke','inlineLineStyle'])document.getElementById(id).disabled=!active||!lines.length;
  for(const id of ['inlineFill','inlineFillOpacity','inlineNoFill'])
   document.getElementById(id).disabled=!active||!shapes.length;
  if(!active)return;
- const first=objects[0],common=(arr,key,fallback)=>{
+ const first=lines[0]||objects[0],common=(arr,key,fallback)=>{
   const values=arr.map(o=>o[key]??fallback);
   return values.every(value=>value===values[0])?values[0]:'';
  };
  document.getElementById('inlineStroke').value=first.color||'#e59a19';
- document.getElementById('inlineLineStyle').value=common(objects,'lineStyle','solid');
+ document.getElementById('inlineLineStyle').value=lines.length?common(lines,'lineStyle','solid'):'solid';
  const opacity=common(objects,'opacity',1);
  document.getElementById('inlineOpacity').value=opacity===''?'':Math.round(opacity*100);
  if(shapes.length){
@@ -153,8 +156,8 @@ function applyInlineLineProperty(property){
  const field=document.getElementById(property),value=field.type==='checkbox'?field.checked:field.value;
  if(!objects.length)return;
  let targets=objects,attribute=null,next=value;
- if(property==='inlineStroke'){attribute='color';if(!/^#[0-9a-f]{6}$/i.test(value))return;}
- if(property==='inlineLineStyle'){attribute='lineStyle';if(!['solid','dashed','dotted'].includes(value))return;}
+ if(property==='inlineStroke'){attribute='color';targets=objects.filter(o=>lineTypes.includes(o.type));if(!/^#[0-9a-f]{6}$/i.test(value))return;}
+ if(property==='inlineLineStyle'){attribute='lineStyle';targets=objects.filter(o=>lineTypes.includes(o.type));if(!['solid','dashed','dotted'].includes(value))return;}
  if(property==='inlineOpacity'){attribute='opacity';if(value===''||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>100){field.reportValidity();return;}next=Number(value)/100;}
  if(property==='inlineFill'){attribute='fillColor';targets=shapes;if(!/^#[0-9a-f]{6}$/i.test(value))return;document.getElementById('inlineNoFill').checked=false;}
  if(property==='inlineFillOpacity'){attribute='fillOpacity';targets=shapes;if(value===''||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>100){field.reportValidity();return;}next=Number(value)/100;}
@@ -176,6 +179,7 @@ document.addEventListener('pointerup',e=>{
  queueMicrotask(syncInlineLineProperties);
 },true);
 document.getElementById('dockEditTrigger')?.addEventListener('click',syncInlineLineProperties);
+window.syncInlineLineProperties=syncInlineLineProperties;
 syncInlineLineProperties();
 
 // Move only from the title; editing controls retain their usual pointer behavior.
