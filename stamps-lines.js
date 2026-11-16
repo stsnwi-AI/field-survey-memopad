@@ -10,25 +10,58 @@ if(instructionButton){
  const choices=document.createElement('div');choices.id='instructionPinChoices';
  choices.className='instruction-pin-choices';choices.hidden=true;choices.setAttribute('role','group');
  choices.setAttribute('aria-label','指示スタンプの種類');
+ // A viewport-level popup avoids clipping by the scrollable floating palette.
+ document.body.append(choices);
+ const editSettings=document.getElementById('dockEditSettings');
+ function hideChoices(){
+  choices.hidden=true;instructionButton.classList.remove('menu-open');
+  instructionButton.setAttribute('aria-expanded','false');
+  instructionButton.setAttribute('aria-pressed',String(typeof tool!=='undefined'&&tool==='stamp'&&stampPreset?.shape==='instruction-pin'));
+ }
+ function placeChoices(){
+  if(choices.hidden)return;
+  const rect=instructionButton.getBoundingClientRect();
+  const width=Math.min(188,window.innerWidth-16);
+  const height=choices.getBoundingClientRect().height||100;
+  choices.style.width=width+'px';
+  choices.style.left=Math.round(Math.max(8,Math.min(window.innerWidth-width-8,rect.left+(rect.width-width)/2)))+'px';
+  // Prefer directly below the stamp button; only flip upward when necessary.
+  const below=rect.bottom+5,above=rect.top-height-5;
+  choices.style.top=Math.round(below+height<=window.innerHeight-8?below:Math.max(8,above))+'px';
+ }
  for(const text of ['要修正','位置確認','施工済','写真撮影']){
   const button=document.createElement('button');button.type='button';button.textContent=text;
   button.title=text+'の指示ピンを配置する';
-  button.onclick=()=>{choices.hidden=true;instructionButton.classList.remove('menu-open');instructionButton.setAttribute('aria-expanded','false');prepareStamp(text,false,true);instructionButton.title='指示スタンプ：'+text+'（図面をタップして配置）';};
+  button.onclick=()=>{
+   hideChoices();prepareStamp(text,false,true);
+   instructionButton.title='指示スタンプ：'+text+'（図面をタップして配置）';
+   instructionButton.classList.add('active');
+   instructionButton.setAttribute('aria-pressed','true');
+  };
   choices.append(button);
  }
- document.getElementById('surveyToolDock').append(choices);
  instructionButton.onclick=()=>{
-  const open=choices.hidden;choices.hidden=!open;
-  instructionButton.setAttribute('aria-expanded',String(open));
-  instructionButton.classList.toggle('menu-open',open);
-  instructionButton.setAttribute('aria-pressed',String(open||((typeof tool!=='undefined')&&tool==='stamp'&&stampPreset?.shape==='instruction-pin')));
-  if(open&&typeof doc!=='undefined'&&!doc){document.getElementById('status').textContent='PDFを開いてから指示スタンプを配置してください。';}
+  if(!choices.hidden){hideChoices();return}
+  if(editSettings?.open)editSettings.open=false;
+  choices.hidden=false;
+  instructionButton.setAttribute('aria-expanded','true');
+  instructionButton.classList.add('menu-open');
+  instructionButton.setAttribute('aria-pressed','true');
+  placeChoices();
+  if(typeof doc!=='undefined'&&!doc){document.getElementById('status').textContent='PDFを開いてから指示スタンプを配置してください。';}
  };
+ editSettings?.addEventListener('toggle',()=>{if(editSettings.open)hideChoices()});
+ document.getElementById('dockMode')?.addEventListener('click',hideChoices);
+ document.getElementById('showSurveyTools')?.addEventListener('click',hideChoices);
+ document.getElementById('tools')?.addEventListener('click',e=>{
+  if(e.target.closest('[data-tool]'))hideChoices();
+ });
  document.addEventListener('pointerdown',e=>{
-  if(!choices.hidden&&!choices.contains(e.target)&&!instructionButton.contains(e.target)){
-   choices.hidden=true;instructionButton.classList.remove('menu-open');instructionButton.setAttribute('aria-expanded','false');
-  }
+  if(!choices.hidden&&!choices.contains(e.target)&&!instructionButton.contains(e.target))hideChoices();
  },true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!choices.hidden){hideChoices();instructionButton.focus()}});
+ window.addEventListener('resize',placeChoices);
+ window.addEventListener('scroll',placeChoices,true);
 }
 
 for(const text of ['要修正','位置確認','施工済','写真撮影']){const b=document.createElement('button');b.textContent=text;b.className='seal-preview';b.onclick=()=>prepareStamp(text);stampBox.querySelector('.stamp-buttons').append(b)}
