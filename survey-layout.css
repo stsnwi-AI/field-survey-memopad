@@ -721,3 +721,23 @@ body>#dockEditSettings #inlineLineProperties>small{display:block;margin-top:4px;
 @media(max-width:320px){
  body>#dockEditSettings #inlineLineProperties .inline-line-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* v1.4.39: denser layout. Keep original inputs, labels and actions functional. */
+body>#dockEditSettings{padding:4px 7px!important;max-height:calc(100dvh - 16px)!important}
+body>#dockEditSettings>summary{min-height:32px!important;padding:2px 5px!important}
+body>#dockEditSettings .palette{margin:3px 0 4px!important;gap:4px!important}
+body>#dockEditSettings .swatch{height:27px!important;width:27px!important}
+body>#dockEditSettings #inlineLineProperties{padding:4px!important;margin:3px 0 5px!important}
+body>#dockEditSettings #inlineLineProperties .inline-line-heading{margin-bottom:3px!important}
+body>#dockEditSettings #inlineLineProperties .inline-line-grid{gap:3px 5px!important}
+body>#dockEditSettings #inlineLineProperties input:not([type=checkbox]),
+body>#dockEditSettings #inlineLineProperties select{min-height:30px!important;height:30px!important}
+body>#dockEditSettings #inlineLineProperties>small{margin-top:2px!important}
+body>#dockEditSettings .settings,
+body>#dockEditSettings .text-style-controls{margin:3px 0!important;gap:3px!important}
+body>#dockEditSettings #editor{padding:5px!important;margin:3px 0!important}
+body>#dockEditSettings #editor .line-width-stepper input{min-height:36px!important}
+body>#dockEditSettings #editor .line-width-buttons button{min-height:35px!important}
+body>#dockEditSettings .editor-heading{margin:0 0 3px!important}
+body>#dockEditSettings .text-size-stepper button{min-height:38px!important}
+body>#dockEditSettings .text-style-buttons button{min-height:36px!important}
