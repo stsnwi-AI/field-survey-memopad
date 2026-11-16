@@ -8,6 +8,26 @@
   if (!dock || !tools || !pin || !grip) return;
   // Retain the same DOM nodes so PDF editor event listeners and state remain attached.
   dock.querySelector('.dock-tools').appendChild(tools);
+  // Bring the original controls into the palette without recreating inputs or replacing handlers.
+  // A collapsible section keeps the drawing unobstructed while preserving color/font/width/edit.
+  const annotationTools=document.getElementById('annotationTools');
+  const editPanel=document.createElement('details');
+  editPanel.id='dockEditSettings';editPanel.className='dock-edit-settings';
+  const editSummary=document.createElement('summary');editSummary.textContent='色・文字・線の設定';
+  editPanel.append(editSummary);
+  for(const selector of [':scope > h3',':scope > .palette',':scope > .settings',':scope > .text-style-controls',':scope > #editor']){
+    const el=annotationTools?.querySelector(selector);
+    if(el)editPanel.append(el);
+  }
+  dock.append(editPanel);
+  const activeEditor=document.getElementById('editor');
+  if(activeEditor){
+    const observer=new MutationObserver(()=>{
+      if(!activeEditor.hidden)editPanel.open=true;
+    });
+    observer.observe(activeEditor,{attributes:true,attributeFilter:['hidden']});
+  }
+
   const compact = window.matchMedia('(max-width:750px)');
   // Palette remains floating at all times. The position button only resets it
   // to a compact top position; the drag handle always stays visible.
