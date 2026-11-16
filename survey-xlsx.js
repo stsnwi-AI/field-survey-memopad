@@ -47,12 +47,22 @@ function photoJpeg(data){
 const heading=(n,style=0)=>'<c r="'+n+'" t="inlineStr" s="'+style+'">'+cstr('')+'</c>';
 const cell=(ref,value,style=0)=>'<c r="'+ref+'" t="inlineStr" s="'+style+'">'+cstr(value)+'</c>';
 function drawingXml(photos){
+ // Excel column C has width 38 (~271 CSS px) and each photo row is 147 pt (~196 px).
+ // Anchor both corners *inside the same target cell* so Excel cannot reflow a picture into an adjacent row/column.
+ const emu=9525, cellWidth=267, cellHeight=196, margin=9;
  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
  '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
  photos.map((p,i)=>{
- const ratio=Math.min(245/p.width,171/p.height);
- const w=Math.round(p.width*ratio*9525),h=Math.round(p.height*ratio*9525);
- return '<xdr:oneCellAnchor><xdr:from><xdr:col>2</xdr:col><xdr:colOff>45720</xdr:colOff><xdr:row>'+(p.row-1)+'</xdr:row><xdr:rowOff>45720</xdr:rowOff></xdr:from><xdr:ext cx="'+w+'" cy="'+h+'"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+(i+1)+'" name="調査写真'+(i+1)+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId'+(i+1)+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+w+'" cy="'+h+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>'
+  const ratio=Math.min((cellWidth-2*margin)/p.width,(cellHeight-2*margin)/p.height,1);
+  const width=Math.max(1,Math.floor(p.width*ratio)),height=Math.max(1,Math.floor(p.height*ratio));
+  const x=Math.floor((cellWidth-width)/2),y=Math.floor((cellHeight-height)/2);
+  const from='<xdr:from><xdr:col>2</xdr:col><xdr:colOff>'+(x*emu)+'</xdr:colOff><xdr:row>'+(p.row-1)+'</xdr:row><xdr:rowOff>'+(y*emu)+'</xdr:rowOff></xdr:from>';
+  const to='<xdr:to><xdr:col>2</xdr:col><xdr:colOff>'+((x+width)*emu)+'</xdr:colOff><xdr:row>'+(p.row-1)+'</xdr:row><xdr:rowOff>'+((y+height)*emu)+'</xdr:rowOff></xdr:to>';
+  const w=width*emu,h=height*emu;
+  return '<xdr:twoCellAnchor editAs="twoCell">'+from+to+
+   '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+(i+1)+'" name="調査写真'+(i+1)+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'+
+   '<xdr:blipFill><a:blip r:embed="rId'+(i+1)+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'+
+   '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+w+'" cy="'+h+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>';
  }).join('')+'</xdr:wsDr>';
 }
 async function build(payload){
