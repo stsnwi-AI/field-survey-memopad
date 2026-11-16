@@ -19,14 +19,56 @@
     const el=annotationTools?.querySelector(selector);
     if(el)editPanel.append(el);
   }
-  dock.append(editPanel);
-  const activeEditor=document.getElementById('editor');
-  if(activeEditor){
-    const observer=new MutationObserver(()=>{
-      if(!activeEditor.hidden)editPanel.open=true;
-    });
-    observer.observe(activeEditor,{attributes:true,attributeFilter:['hidden']});
+  // Keep the original editor controls and listeners, but show them in a
+  // full-size floating panel instead of the small scroll-clipped tool dock.
+  const editTrigger=document.createElement('button');
+  editTrigger.id='dockEditTrigger';editTrigger.type='button';
+  editTrigger.className='dock-edit-trigger';
+  editTrigger.textContent='色・文字・線の設定';
+  editTrigger.setAttribute('aria-controls','dockEditSettings');
+  editTrigger.setAttribute('aria-expanded','false');
+  dock.append(editTrigger);
+  document.body.append(editPanel);
+  editSummary.textContent='色・文字・線の設定（押すと閉じる）';
+  function placeEditSettings(){
+    if(!editPanel.open)return;
+    const anchor=editTrigger.getBoundingClientRect();
+    const width=Math.min(440,window.innerWidth-16);
+    const height=Math.min(editPanel.getBoundingClientRect().height,window.innerHeight-16);
+    const left=Math.max(8,Math.min(window.innerWidth-width-8,anchor.right-width));
+    const down=anchor.bottom+5;
+    const top=down+height<=window.innerHeight-8?down:Math.max(8,anchor.top-height-5);
+    editPanel.style.left=Math.round(left)+'px';
+    editPanel.style.top=Math.round(top)+'px';
+    editPanel.style.width=Math.round(width)+'px';
   }
+  function showEditSettings(show){
+    editPanel.open=Boolean(show);
+    editTrigger.classList.toggle('active',editPanel.open);
+    editTrigger.setAttribute('aria-expanded',String(editPanel.open));
+    if(editPanel.open){
+      const stampMenu=document.getElementById('instructionPinChoices');
+      if(stampMenu&&!stampMenu.hidden){
+        document.getElementById('instructionPinPalette')?.click();
+      }
+      requestAnimationFrame(placeEditSettings);
+    }
+  }
+  editTrigger.addEventListener('click',()=>showEditSettings(!editPanel.open));
+  editPanel.addEventListener('toggle',()=>{
+    editTrigger.classList.toggle('active',editPanel.open);
+    editTrigger.setAttribute('aria-expanded',String(editPanel.open));
+    if(editPanel.open)requestAnimationFrame(placeEditSettings);
+  });
+  document.addEventListener('pointerdown',e=>{
+    if(editPanel.open&&!editPanel.contains(e.target)&&!editTrigger.contains(e.target))
+      showEditSettings(false);
+  },true);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&editPanel.open){showEditSettings(false);editTrigger.focus();}
+  });
+  window.addEventListener('resize',placeEditSettings);
+  window.addEventListener('scroll',placeEditSettings,true);
 
   const compact = window.matchMedia('(max-width:750px)');
   // Palette remains floating at all times. The position button only resets it
