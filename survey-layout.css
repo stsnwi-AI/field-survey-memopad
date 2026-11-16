@@ -464,3 +464,48 @@ body.survey-horizontal-editor main>.workspace{
 .survey-record-navigation button{min-height:43px;padding:7px 10px;border:1px solid #aab8cc;border-radius:7px;background:#fff}
 .survey-record-navigation span{font-size:13px;white-space:nowrap}
 @media(min-width:950px){.survey-dialog{width:min(850px,90vw)!important;max-width:90vw!important}.survey-dialog #surveyDetail{max-height:calc(88vh - 80px)!important}#surveyThumbnails .survey-photo{width:165px;max-width:32%}}
+
+/* Ver.1.4.33: compact floating palette with icon-first touch controls. */
+#surveyToolDock.dock-floating{
+ width:min(246px,calc(100vw - 16px))!important;
+ padding:5px!important;gap:3px!important;
+ max-height:min(75dvh,640px)!important;
+}
+#surveyToolDock.dock-floating .dock-title{font-size:11px!important;flex:1 1 45px!important}
+#surveyToolDock.dock-floating .dock-grip{min-height:32px!important;padding:4px 7px!important;font-size:11px!important}
+#surveyToolDock.dock-floating .dock-mode{min-height:32px!important;padding:4px!important;font-size:10px!important}
+#surveyToolDock.dock-floating #tools{
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ gap:3px!important;overflow:visible!important;
+}
+#surveyToolDock.dock-floating #tools button{
+ position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:44px!important;width:100%!important;min-width:0!important;
+ padding:4px!important;gap:0!important;flex-direction:column!important;
+}
+#surveyToolDock.dock-floating #tools button .ui-icon{
+ width:22px!important;height:22px!important;min-width:22px!important;flex:0 0 22px!important;
+}
+#surveyToolDock.dock-floating #tools button>span{
+ position:absolute!important;width:1px!important;height:1px!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;
+}
+#surveyToolDock.dock-floating #tools button.active,
+#surveyToolDock.dock-floating #tools button[aria-pressed="true"]{outline:2px solid #0b638e;outline-offset:-2px}
+#surveyToolDock .dock-selected-label{
+ order:5;flex:1 1 100%;min-height:24px;display:flex;align-items:center;
+ padding:3px 7px;border-radius:5px;background:#d8e9f2;
+ color:#173c51;font-size:12px;font-weight:700;line-height:1.25;
+}
+#surveyToolDock .dock-selected-label[hidden]{display:none!important}
+#surveyToolDock .instruction-pin-choices[hidden]{display:none!important}
+#surveyToolDock .instruction-pin-choices{
+ order:6;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ flex:1 1 100%;width:100%;gap:4px;padding:4px;background:#fff;border:1px solid #adc7d8;border-radius:7px;
+}
+#surveyToolDock .instruction-pin-choices button{font-size:12px;min-height:43px;border-radius:7px}
+@media(max-width:750px){
+ #surveyToolDock.dock-floating{width:min(226px,calc(100vw - 12px))!important;max-height:70dvh!important}
+ #surveyToolDock.dock-floating #tools{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ #surveyToolDock.dock-floating #tools button{min-height:44px!important}
+}

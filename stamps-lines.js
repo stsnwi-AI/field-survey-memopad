@@ -2,8 +2,33 @@
 const stampBox=document.createElement('section');stampBox.id='stampBox';
 stampBox.innerHTML='<h2>指示スタンプ</h2><div class="stamp-buttons"></div><label>番号 <select id="stampNumber" aria-label="番号付き丸印"></select></label><button id="placeNumber">丸番号を配置</button>';
 document.querySelector('aside').append(stampBox);
-function prepareStamp(text,number=false){if(pageBusy||rendering)return;if(mobileMedia.matches)setTouchMode('edit',false);stampPreset={text,shape:number?'circle':'rect',w:number?54:140,h:number?54:50};setTool('stamp');draw()}
+function prepareStamp(text,number=false,instructionPin=false){if(pageBusy||rendering)return;if(mobileMedia.matches)setTouchMode('edit',false);stampPreset={text,shape:instructionPin?'instruction-pin':number?'circle':'rect',w:instructionPin?52:number?54:140,h:instructionPin?66:number?54:50};setTool('stamp');draw()}
 toolLabels.stamp='スタンプを配置';
+// Palette-only instruction pin stamps: the survey-number pin remains a separate record type.
+const instructionButton=document.getElementById('instructionPinPalette');
+if(instructionButton){
+ const choices=document.createElement('div');choices.id='instructionPinChoices';
+ choices.className='instruction-pin-choices';choices.hidden=true;choices.setAttribute('role','group');
+ choices.setAttribute('aria-label','指示スタンプの種類');
+ for(const text of ['要修正','位置確認','施工済','写真撮影']){
+  const button=document.createElement('button');button.type='button';button.textContent=text;
+  button.title=text+'の指示ピンを配置する';
+  button.onclick=()=>{choices.hidden=true;instructionButton.setAttribute('aria-expanded','false');prepareStamp(text,false,true)};
+  choices.append(button);
+ }
+ document.getElementById('surveyToolDock').append(choices);
+ instructionButton.onclick=()=>{
+  const open=choices.hidden;choices.hidden=!open;
+  instructionButton.setAttribute('aria-expanded',String(open));
+  if(open&&typeof doc!=='undefined'&&!doc){document.getElementById('status').textContent='PDFを開いてから指示スタンプを配置してください。';}
+ };
+ document.addEventListener('pointerdown',e=>{
+  if(!choices.hidden&&!choices.contains(e.target)&&!instructionButton.contains(e.target)){
+   choices.hidden=true;instructionButton.setAttribute('aria-expanded','false');
+  }
+ },true);
+}
+
 for(const text of ['要修正','位置確認','施工済','写真撮影']){const b=document.createElement('button');b.textContent=text;b.className='seal-preview';b.onclick=()=>prepareStamp(text);stampBox.querySelector('.stamp-buttons').append(b)}
 for(let n=1;n<=20;n++){const o=document.createElement('option');o.value=String.fromCharCode(0x2460+n-1);o.textContent=o.value;$('stampNumber').append(o)}
 $('placeNumber').onclick=()=>prepareStamp(String($('stampNumber').selectedIndex+1),true);

@@ -45,7 +45,7 @@ $('imageFile').onchange=e=>{const f=e.target.files[0];if(f){const r=new FileRead
 function point(e){const r=canvas.getBoundingClientRect();return unturnPoint({x:(e.clientX-r.left)*canvas.width/r.width/scale,y:(e.clientY-r.top)*canvas.height/r.height/scale},pageEntries[page-1])}
 function hitAnnotation(o,p){const b=bounds(o),a=-(o.rotation||0)*Math.PI/180,cx=b.x+b.w/2,cy=b.y+b.h/2,dx=p.x-cx,dy=p.y-cy;const x=cx+dx*Math.cos(a)-dy*Math.sin(a),y=cy+dx*Math.sin(a)+dy*Math.cos(a);return x>=b.x-8&&x<=b.x+b.w+8&&y>=b.y-8&&y<=b.y+b.h+8}
 function topAnnotationAt(p){for(let i=list().length-1;i>=0;i--)if(hitAnnotation(list()[i],p))return i;return -1}
-canvas.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;if(!doc||rendering||pageBusy)return;dragSnapshotTaken=false;start=point(e);canvas.setPointerCapture(e.pointerId);if(tool==='text'){const hit=topAnnotationAt(start);if(hit>=0&&list()[hit].type==='text')setTool('select',false)}if(tool==='select'){const before=selectionIndices(),hit=topAnnotationAt(start),extend=e.shiftKey||window.multiSelectTouch;dragGroup=null;dragHandle=!extend&&before.length===1&&selected>=0?hitHandle(list()[selected],start):null;if(dragHandle){working=JSON.parse(JSON.stringify(list()[selected]));draw();return}if(extend){const next=new Set(before);if(hit>=0){if(next.has(hit))next.delete(hit);else next.add(hit)}selectIndices([...next]);start=null;working=null;syncEditor();draw();return}if(hit<0)selectIndices([]);else if(!before.includes(hit))selectIndices([hit]);else selected=hit;if(selected>=0){working=JSON.parse(JSON.stringify(list()[selected]));if(selectionIndices().length>1)dragGroup=selectionIndices().map(i=>({i,original:JSON.parse(JSON.stringify(list()[i]))}))}syncEditor();draw();return}if(tool==='stamp'&&stampPreset){snapshot();const o={type:'stamp',x:start.x-stampPreset.w/2,y:start.y-stampPreset.h/2,...stampPreset,color:currentColor};list().push(o);start=null;setTool('select',false);selectIndices([list().length-1]);syncEditor();draw();return}if(tool==='text'){const t=$('text').value;if(!t.trim()){say('文字入力欄に、追加する文字を入力してください。');return}snapshot();list().push({type:tool,x:start.x,y:start.y,text:t,size:currentTextSize,...textStyleControls('text'),color:currentColor});selected=-1;draw();return}if(tool==='image'&&!imgSource)return;working={type:tool,x:start.x,y:start.y,w:0,h:0,color:currentColor,src:tool==='image'?imgSource:undefined,points:tool==='pen'?[start]:undefined};selected=-1};
+canvas.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;if(!doc||rendering||pageBusy)return;dragSnapshotTaken=false;start=point(e);canvas.setPointerCapture(e.pointerId);if(tool==='text'){const hit=topAnnotationAt(start);if(hit>=0&&list()[hit].type==='text')setTool('select',false)}if(tool==='select'){const before=selectionIndices(),hit=topAnnotationAt(start),extend=e.shiftKey||window.multiSelectTouch;dragGroup=null;dragHandle=!extend&&before.length===1&&selected>=0?hitHandle(list()[selected],start):null;if(dragHandle){working=JSON.parse(JSON.stringify(list()[selected]));draw();return}if(extend){const next=new Set(before);if(hit>=0){if(next.has(hit))next.delete(hit);else next.add(hit)}selectIndices([...next]);start=null;working=null;syncEditor();draw();return}if(hit<0)selectIndices([]);else if(!before.includes(hit))selectIndices([hit]);else selected=hit;if(selected>=0){working=JSON.parse(JSON.stringify(list()[selected]));if(selectionIndices().length>1)dragGroup=selectionIndices().map(i=>({i,original:JSON.parse(JSON.stringify(list()[i]))}))}syncEditor();draw();return}if(tool==='stamp'&&stampPreset){snapshot();const o={type:'stamp',x:start.x-stampPreset.w/2,y:start.y-(stampPreset.shape==='instruction-pin'?stampPreset.h:stampPreset.h/2),...stampPreset,color:currentColor};list().push(o);start=null;setTool('select',false);selectIndices([list().length-1]);syncEditor();draw();return}if(tool==='text'){const t=$('text').value;if(!t.trim()){say('文字入力欄に、追加する文字を入力してください。');return}snapshot();list().push({type:tool,x:start.x,y:start.y,text:t,size:currentTextSize,...textStyleControls('text'),color:currentColor});selected=-1;draw();return}if(tool==='image'&&!imgSource)return;working={type:tool,x:start.x,y:start.y,w:0,h:0,color:currentColor,src:tool==='image'?imgSource:undefined,points:tool==='pen'?[start]:undefined};selected=-1};
 canvas.onpointermove=e=>{if(!working||!start){if(tool==='select'&&selected>=0){const h=hitHandle(list()[selected],point(e));canvas.style.cursor=h?(h.key==='nw'||h.key==='se'?'nwse-resize':h.key==='ne'||h.key==='sw'?'nesw-resize':h.key==='rotate'?'grab':'crosshair'):'move'}return;}const p=point(e),dx=p.x-start.x,dy=p.y-start.y;if(tool==='select'){if(!dragSnapshotTaken){if(dx===0&&dy===0)return;snapshot();dragSnapshotTaken=true}if(dragGroup){for(const {i,original}of dragGroup)moveAnnotation(list()[i],original,dx,dy);draw();return}const o=list()[selected];if(dragHandle){if(dragHandle.key==='rotate'){const b=bounds(working),cx=b.x+b.w/2,cy=b.y+b.h/2;o.rotation=(working.rotation||0)+(Math.atan2(p.y-cy,p.x-cx)-Math.atan2(start.y-cy,start.x-cx))*180/Math.PI}else resizeAnnotation(o,working,dragHandle,p);draw();return}o.x=working.x+dx;o.y=working.y+dy;if(o.type==='pen')o.points=working.points.map(v=>({x:v.x+dx,y:v.y+dy}))}else if(tool==='pen')working.points.push(p);else{working.w=dx;working.h=dy}draw()};
 function finish(){if(working&&tool!=='select'){if(tool==='pen'||Math.abs(working.w)>3&&Math.abs(working.h)>3||tool==='arrow'&&Math.hypot(working.w,working.h)>3){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;if(tool==='select')syncEditor();draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
 $('undo').onclick=()=>travelHistory(false);$('delete').onclick=removeSelectedObjects;
@@ -204,13 +204,13 @@ function paintLineEnd(c,x,y,a,cap){if(cap==='none')return;c.beginPath();if(cap==
 
 function paintStamp(c,o){
 const w=o.w,h=o.h,x=o.x,y=o.y,m=Math.min(w,h),edge=Math.max(.7,m*.035);c.setLineDash([]);c.lineWidth=edge;
-if(o.surveyId||o.shape==='survey-pin'){
+if(o.surveyId||o.shape==='survey-pin'||o.shape==='instruction-pin'){
  // A round-headed location pin. The sharp tip is at (x+w/2,y+h),
  // while the number remains in the round head. Older survey circles are
  // rendered as pins too, without changing saved records or surveyId.
  // Legacy circle markers were centered on the clicked point. Keep their
  // tip at that original point when displaying them as a pin.
- const pinY=o.shape==='survey-pin'?y:y-h/2;
+ const pinY=(o.shape==='survey-pin'||o.shape==='instruction-pin')?y:y-h/2;
  const cx=x+w/2,cy=pinY+h*.37,r=Math.min(w*.39,h*.36);
  const a=Math.PI*.25,b=Math.PI*.75;
  c.save();c.setLineDash([]);c.beginPath();
@@ -222,7 +222,14 @@ if(o.surveyId||o.shape==='survey-pin'){
  c.lineWidth=Math.max(.9,m*.065);c.fill();c.stroke();
  c.font='bold '+Math.max(7,Math.min(r*.95,r*2.0/Math.max(1,String(o.text||'').length*.65)))+'px sans-serif';
  c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
- c.fillText(String(o.text||''),cx,cy+Math.min(1,h*.03),r*1.78);
+ if(o.shape==='instruction-pin'){
+  // Two compact lines of Japanese instruction text inside the pin head.
+  const letters=Array.from(String(o.text||''));const split=Math.ceil(letters.length/2);
+  const lines=letters.length>2?[letters.slice(0,split).join(''),letters.slice(split).join('')]:[letters.join('')];
+  const fontSize=Math.max(7,Math.min(r*.69,19/Math.max(1,split*.66)));
+  c.font='bold '+fontSize+'px sans-serif';
+  lines.forEach((line,i)=>c.fillText(line,cx,cy+(i-(lines.length-1)/2)*fontSize*.95,r*1.65));
+ }else c.fillText(String(o.text||''),cx,cy+Math.min(1,h*.03),r*1.78);
  c.restore();return;
 }
 if(o.shape==='circle'){for(const inset of [edge,edge*3]){c.beginPath();c.ellipse(x+w/2,y+h/2,Math.max(.1,w/2-inset),Math.max(.1,h/2-inset),0,0,Math.PI*2);c.stroke()}}

@@ -48,4 +48,27 @@
     originalDelete.click();
   });
   syncPin();
+
+  // Compact palette: retain accessible names and show the touched icon's full label.
+  const dock=document.getElementById('surveyToolDock');
+  const label=document.createElement('output');
+  label.className='dock-selected-label';
+  label.setAttribute('role','status');
+  label.setAttribute('aria-live','polite');
+  label.textContent='アイコンを触れると名称を表示';
+  dock.append(label);
+  const actions=Array.from(tools.querySelectorAll('button'));
+  const labels=new Map();
+  for(const button of actions){
+    const name=button.querySelector('span')?.textContent?.trim()||button.getAttribute('aria-label')||button.title||'操作';
+    labels.set(button,name);
+    button.setAttribute('aria-label',name);
+    if(!button.title)button.title=name;
+    button.addEventListener('pointerdown',()=>{label.textContent=name},{passive:true});
+    button.addEventListener('focus',()=>{label.textContent=name});
+    button.addEventListener('click',()=>{label.textContent=name});
+  }
+  const originalSync=()=>{const current=pin.querySelector('span')?.textContent?.trim();if(current){labels.set(pin,current);pin.setAttribute('aria-label',current)}};
+  originalPin.addEventListener('click',()=>queueMicrotask(originalSync));
+  originalSync();
 })();
