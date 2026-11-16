@@ -30,10 +30,11 @@
   dock.append(editTrigger);
   document.body.append(editPanel);
   editSummary.textContent='色・文字・線の設定（押すと閉じる）';
+  let editWasDragged=false;
   function placeEditSettings(){
-    if(!editPanel.open)return;
+    if(!editPanel.open||editWasDragged)return;
     const anchor=editTrigger.getBoundingClientRect();
-    const width=Math.min(440,window.innerWidth-16);
+    const width=Math.min(370,window.innerWidth-16);
     const height=Math.min(editPanel.getBoundingClientRect().height,window.innerHeight-16);
     const left=Math.max(8,Math.min(window.innerWidth-width-8,anchor.right-width));
     const down=anchor.bottom+5;
@@ -43,6 +44,7 @@
     editPanel.style.width=Math.round(width)+'px';
   }
   function showEditSettings(show){
+    if(show)editWasDragged=false;
     editPanel.open=Boolean(show);
     editTrigger.classList.toggle('active',editPanel.open);
     editTrigger.setAttribute('aria-expanded',String(editPanel.open));
@@ -67,7 +69,42 @@
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&editPanel.open){showEditSettings(false);editTrigger.focus();}
   });
-  window.addEventListener('resize',placeEditSettings);
+  // Drag only from the panel heading; form inputs keep their normal touch behavior.
+  // Ignore the synthetic click after a drag, or <summary> would close the panel.
+  let editDrag=null,ignoreSummaryClick=false;
+  editSummary.setAttribute('aria-label','色・文字・線の設定：ここを押したまま移動');
+  editSummary.title='ここを指またはマウスでドラッグするとパレットを移動できます';
+  editSummary.addEventListener('pointerdown',e=>{
+    if(e.button!==undefined&&e.button!==0)return;
+    const rect=editPanel.getBoundingClientRect();
+    editDrag={id:e.pointerId,startX:e.clientX,startY:e.clientY,left:rect.left,top:rect.top,moved:false};
+    editSummary.setPointerCapture(e.pointerId);
+  });
+  editSummary.addEventListener('pointermove',e=>{
+    const drag=editDrag;if(!drag||drag.id!==e.pointerId)return;
+    const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
+    if(!drag.moved&&Math.hypot(dx,dy)<7)return;
+    drag.moved=true;editWasDragged=true;ignoreSummaryClick=true;
+    const maxLeft=Math.max(8,window.innerWidth-editPanel.offsetWidth-8);
+    const maxTop=Math.max(8,window.innerHeight-editPanel.offsetHeight-8);
+    editPanel.style.left=Math.round(Math.max(8,Math.min(maxLeft,drag.left+dx)))+'px';
+    editPanel.style.top=Math.round(Math.max(8,Math.min(maxTop,drag.top+dy)))+'px';
+    e.preventDefault();
+  });
+  function endEditDrag(e){if(editDrag?.id===e.pointerId)editDrag=null;}
+  editSummary.addEventListener('pointerup',endEditDrag);
+  editSummary.addEventListener('pointercancel',endEditDrag);
+  editSummary.addEventListener('lostpointercapture',endEditDrag);
+  editSummary.addEventListener('click',e=>{
+    if(ignoreSummaryClick){e.preventDefault();e.stopPropagation();ignoreSummaryClick=false;}
+  },true);
+  window.addEventListener('resize',()=>{
+    if(editWasDragged&&editPanel.open){
+      const r=editPanel.getBoundingClientRect();
+      editPanel.style.left=Math.round(Math.max(8,Math.min(window.innerWidth-r.width-8,r.left)))+'px';
+      editPanel.style.top=Math.round(Math.max(8,Math.min(window.innerHeight-r.height-8,r.top)))+'px';
+    }else placeEditSettings();
+  });
   window.addEventListener('scroll',placeEditSettings,true);
 
   const compact = window.matchMedia('(max-width:750px)');
