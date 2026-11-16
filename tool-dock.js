@@ -15,7 +15,7 @@
   editPanel.id='dockEditSettings';editPanel.className='dock-edit-settings';
   const editSummary=document.createElement('summary');editSummary.textContent='色・文字・線の設定';
   editPanel.append(editSummary);
-  for(const selector of [':scope > h3',':scope > .palette',':scope > .settings',':scope > .text-style-controls',':scope > #editor']){
+  for(const selector of [':scope > h3',':scope > .palette',':scope > #inlineLineProperties',':scope > .settings',':scope > .text-style-controls',':scope > #editor']){
     const el=annotationTools?.querySelector(selector);
     if(el)editPanel.append(el);
   }
