@@ -609,3 +609,47 @@ body>#instructionPinChoices button:focus-visible,
 body>#instructionPinChoices button:hover{
  background:#dcecf7!important;border-color:#27678c!important;outline:2px solid #27678c!important;
 }
+
+/* v1.4.37: the color, text and line editor is now a large, standalone panel. */
+#surveyToolDock .dock-edit-trigger{
+ order:7!important;flex:1 1 100%!important;min-height:42px!important;
+ padding:8px 10px!important;background:#fff!important;color:#173f54!important;
+ border:1px solid #8aafc4!important;border-radius:7px!important;
+ font-size:12px!important;font-weight:750!important;
+}
+#surveyToolDock .dock-edit-trigger.active{
+ background:#d6eaf6!important;border-color:#175f8b!important;
+ outline:2px solid #175f8b!important;outline-offset:-2px;
+}
+#surveyToolDock.dock-horizontal .dock-edit-trigger{
+ order:initial!important;flex:0 0 auto!important;
+ min-height:44px!important;white-space:nowrap!important;
+}
+body>#dockEditSettings{
+ position:fixed!important;z-index:185!important;box-sizing:border-box!important;
+ display:none!important;max-width:calc(100vw - 16px)!important;
+ max-height:calc(100dvh - 16px)!important;overflow-y:auto!important;
+ overscroll-behavior:contain!important;padding:10px!important;
+ border:2px solid #8aafc4!important;border-radius:10px!important;
+ background:#f7fbfd!important;color:#173f54!important;
+ box-shadow:0 12px 30px #102b3b70!important;
+}
+body>#dockEditSettings[open]{display:block!important}
+body>#dockEditSettings>summary{
+ min-height:44px!important;display:flex!important;align-items:center!important;
+ padding:6px!important;font-size:14px!important;font-weight:800!important;
+ cursor:pointer!important;position:sticky;top:-10px;background:#f7fbfd;z-index:1;
+}
+body>#dockEditSettings .palette{
+ display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:8px!important;margin:8px 0 16px!important;
+}
+body>#dockEditSettings .swatch{width:34px!important;height:34px!important}
+body>#dockEditSettings .settings,
+body>#dockEditSettings .text-style-controls{margin:10px 0!important}
+body>#dockEditSettings #editor{padding:10px!important;margin:8px 0!important}
+body>#dockEditSettings #editor[hidden]{display:none!important}
+@media(max-width:600px){
+ body>#dockEditSettings .palette{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+ body>#dockEditSettings .swatch{width:32px!important;height:32px!important}
+}
