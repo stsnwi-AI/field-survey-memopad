@@ -83,8 +83,11 @@ canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&w
  // Any other one-finger drag pans the drawing (including object backgrounds).
  // A single stationary tap selects an object and arms its edit mode.
  const hitAtDown=topAnnotationAt(point(e));
+ const selectedAtDown=selectionIndices();
+ const selectedHandle=tool==='select'&&selectedAtDown.length===1&&selected>=0&&
+   Boolean(hitHandle(list()[selected],point(e)));
  const dragSelected=tool==='select'&&
-   hitAtDown>=0&&selectionIndices().includes(hitAtDown);
+   ((hitAtDown>=0&&selectedAtDown.includes(hitAtDown))||selectedHandle);
  // A selected object must remain draggable even when a recognized pen has
  // switched the tablet into pen-first mode; blank drags still pan the page.
  if(((window.fieldStylusMode||touchMode==='browse')&&!dragSelected)||
