@@ -110,4 +110,34 @@ window.fieldSurveyExcelExport=async payload=>{
  a.href=url;a.download='現場調査報告書_'+new Date().toISOString().slice(0,10)+'.xlsx';
  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 };
+}
+/* v1.4.29: original survey photos only (no PDF, memo or spreadsheet). */
+window.fieldSurveyPhotoZipExport=payload=>{
+ if(!payload||!Array.isArray(payload.entries))throw Error('調査写真の記録がありません');
+ const files=[];let totalBytes=0;
+ const extByType={jpeg:'jpg',png:'png',webp:'webp',gif:'gif',heic:'heic',heif:'heif',avif:'avif',bmp:'bmp'};
+ if(payload.entries.length>2000)throw Error('調査番号が2000件を超えています');
+ for(const entry of payload.entries){
+  const photos=Array.isArray(entry.photos)?entry.photos:[];
+  if(photos.length>150)throw Error('1つの調査番号に150枚を超える写真があります');
+  for(let i=0;i<photos.length;i++){
+   const data=photos[i]?.data;
+   if(typeof data!=='string')throw Error('調査写真のデータが不正です');
+   const m=/^data:image\/(jpeg|png|webp|gif|heic|heif|avif|bmp);base64,([A-Za-z0-9+/=]+)$/i.exec(data);
+   if(!m)throw Error('写真の形式を読み込めません。P'+entry.page+' No.'+entry.no+' 写真'+(i+1));
+   const binary=atob(m[2]);const bytes=new Uint8Array(binary.length);
+   for(let k=0;k<binary.length;k++)bytes[k]=binary.charCodeAt(k);
+   totalBytes+=bytes.length;
+   if(files.length>=500)throw Error('写真の合計が500枚を超えています。分割して出力してください');
+   if(totalBytes>350*1024*1024)throw Error('写真データが350MBを超えています。分割して出力してください');
+   const pad=(v,width)=>String(v).padStart(width,'0');
+   files.push({name:'P'+pad(entry.page,3)+'_No'+pad(entry.no,3)+'_'+pad(i+1,2)+'.'+extByType[m[1].toLowerCase()],data:bytes});
+  }
+ }
+ if(!files.length)throw Error('この図面には出力できる写真がありません');
+ const blob=zip(files),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='現場調査写真_'+new Date().toLocaleDateString('sv-SE')+'.zip';
+ document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ return files.length;
+};
 })();
