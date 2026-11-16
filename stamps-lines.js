@@ -101,6 +101,83 @@ $('applyLineStyle').onclick=()=>{
 
 $('strokeColorChoice').oninput=()=>{$('applyStrokeColor').checked=true};$('fillColorChoice').oninput=()=>{$('fillModeChoice').value='color'};
 
+/* v1.4.38: direct line/fill/opacity controls beside the color palette.
+ * Uses existing selected annotations and undo history; the legacy dialog's
+ * internals are kept as a fallback, but its extra buttons are hidden.
+ */
+lineMenuButton.id='legacyLineStyleMenu';
+lineTouchButton.id='legacyLineStyleTouch';
+const inlineLineProperties=document.createElement('section');
+inlineLineProperties.id='inlineLineProperties';
+inlineLineProperties.setAttribute('aria-label','選択した線・図形の編集');
+inlineLineProperties.innerHTML=
+ '<div class="inline-line-heading"><strong>線・背景・透明度</strong><small id="inlineLineStatus">線・図形を選ぶと編集できます</small></div>'+
+ '<div class="inline-line-grid">'+
+ '<label>線の色<input id="inlineStroke" type="color" value="#e59a19"></label>'+
+ '<label>線種<select id="inlineLineStyle"><option value="">混在</option><option value="solid">実線</option><option value="dashed">破線</option><option value="dotted">点線</option></select></label>'+
+ '<label>全体の透明度<input id="inlineOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
+ '<label>背景色<input id="inlineFill" type="color" value="#ffffff"></label>'+
+ '<label>背景の透明度<input id="inlineFillOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
+ '<label class="inline-fill-clear"><input id="inlineNoFill" type="checkbox">背景なし</label>'+
+ '</div><small>透明度：0＝透明、100＝不透明（％）</small>';
+// The normal color chooser remains first; move these controls with that chooser.
+document.querySelector('#annotationTools > .palette')?.after(inlineLineProperties);
+const inlineFields=['inlineStroke','inlineLineStyle','inlineOpacity','inlineFill','inlineFillOpacity','inlineNoFill'].map(id=>document.getElementById(id));
+function inlineTargets(){return selectedObjects().filter(o=>lineTypes.includes(o.type))}
+function syncInlineLineProperties(){
+ const objects=inlineTargets(),shapes=objects.filter(o=>['rect','ellipse'].includes(o.type));
+ const active=objects.length>0&&!pageBusy&&!rendering;
+ document.getElementById('inlineLineStatus').textContent=active?objects.length+'件を編集中':'線・図形を選ぶと編集できます';
+ for(const control of inlineFields)control.disabled=!active;
+ for(const id of ['inlineFill','inlineFillOpacity','inlineNoFill'])
+  document.getElementById(id).disabled=!active||!shapes.length;
+ if(!active)return;
+ const first=objects[0],common=(arr,key,fallback)=>{
+  const values=arr.map(o=>o[key]??fallback);
+  return values.every(value=>value===values[0])?values[0]:'';
+ };
+ document.getElementById('inlineStroke').value=first.color||'#e59a19';
+ document.getElementById('inlineLineStyle').value=common(objects,'lineStyle','solid');
+ const opacity=common(objects,'opacity',1);
+ document.getElementById('inlineOpacity').value=opacity===''?'':Math.round(opacity*100);
+ if(shapes.length){
+  const s=shapes[0],alpha=common(shapes,'fillOpacity',1);
+  document.getElementById('inlineFill').value=s.fillColor||'#ffffff';
+  document.getElementById('inlineFillOpacity').value=alpha===''?'':Math.round(alpha*100);
+  document.getElementById('inlineNoFill').checked=shapes.every(o=>o.fillColor===null||o.fillColor===undefined);
+ }
+}
+function applyInlineLineProperty(property){
+ if(pageBusy||rendering||start||working)return;
+ const objects=inlineTargets(),shapes=objects.filter(o=>['rect','ellipse'].includes(o.type));
+ const field=document.getElementById(property),value=field.type==='checkbox'?field.checked:field.value;
+ if(!objects.length)return;
+ let targets=objects,attribute=null,next=value;
+ if(property==='inlineStroke'){attribute='color';if(!/^#[0-9a-f]{6}$/i.test(value))return;}
+ if(property==='inlineLineStyle'){attribute='lineStyle';if(!['solid','dashed','dotted'].includes(value))return;}
+ if(property==='inlineOpacity'){attribute='opacity';if(value===''||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>100){field.reportValidity();return;}next=Number(value)/100;}
+ if(property==='inlineFill'){attribute='fillColor';targets=shapes;if(!/^#[0-9a-f]{6}$/i.test(value))return;document.getElementById('inlineNoFill').checked=false;}
+ if(property==='inlineFillOpacity'){attribute='fillOpacity';targets=shapes;if(value===''||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>100){field.reportValidity();return;}next=Number(value)/100;}
+ if(property==='inlineNoFill'){attribute='fillColor';targets=shapes;next=value?null:document.getElementById('inlineFill').value;}
+ if(!attribute||!targets.length||!targets.some(o=>o[attribute]!==next))return;
+ snapshot();
+ for(const o of targets)o[attribute]=next;
+ draw();
+ syncInlineLineProperties();
+}
+for(const field of inlineFields)field.addEventListener('change',()=>applyInlineLineProperty(field.id));
+const originalInlineTouchUpdate=window.updateTouchSelection;
+window.updateTouchSelection=function(...args){
+ originalInlineTouchUpdate?.(...args);
+ syncInlineLineProperties();
+};
+document.addEventListener('pointerup',e=>{
+ if(e.target.closest?.('#dockEditSettings'))return;
+ queueMicrotask(syncInlineLineProperties);
+},true);
+document.getElementById('dockEditTrigger')?.addEventListener('click',syncInlineLineProperties);
+syncInlineLineProperties();
+
 // Move only from the title; editing controls retain their usual pointer behavior.
 const editWindowTitle=lineDialog.querySelector('h2');editWindowTitle.tabIndex=0;editWindowTitle.title='ドラッグで移動。キーボードは矢印キーで移動。';editWindowTitle.setAttribute('aria-label','編集ウィンドウを移動');
 let editWindowPosition=null,editWindowDrag=null;
