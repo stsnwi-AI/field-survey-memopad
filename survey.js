@@ -1,7 +1,7 @@
 /* Survey extension on top of unchanged PDF editing engine. No changes to source app.js. */
 (()=>{'use strict';
 const by=id=>document.getElementById(id);const PREFIX='field-survey-v03';let records={},activeId=null,placing=false,changeSerial=0,db=null,activeStorageKey=null,storageGeneration=0,storageLoading=false,siteId='';
-const status=msg=>by('surveyStatus').textContent=msg;
+const status=msg=>{const el=by('surveyStatus');if(!el)return;el.textContent=msg;el.dataset.state=/失敗|できません|エラー|不正|確認してください|開いて|ないため|ありません|準備/.test(msg)?'error':/出力しました|完了|保存しました/.test(msg)?'success':'info';};
 const siteField=by('surveySiteId'),siteCurrent=by('surveySiteCurrent');
 function validateSite(v){const id=String(v||'').trim();return id.length>=1&&id.length<=60&&!/[<>\\/\x00-\x1f]/.test(id)?id:null}
 function siteLabel(){siteCurrent.textContent=siteId?'旧方式の現場ID：'+siteId+'（PDF内の調査記録が優先されます）':'通常は現場ID不要。編集済みPDFに写真・メモも保存します'}
@@ -179,7 +179,7 @@ by('surveyNumberScope').onchange=()=>{
  renderList();if(activeId){const found=documentPins().find(v=>v.o.surveyId===activeId);if(found)by('surveyPinTitle').textContent='調査番号 No.'+String(found.o.surveyNumber).padStart(3,'0')}
 };
 by('surveyContinuous').onchange=()=>{if(placing)setPlace(true)};
-by('surveyOpenSelected').onclick=()=>{const o=typeof selected==='number'?list()[selected]:null;if(o?.surveyId)openRecord(o.surveyId,getPage());else status('PDF編集の「選択・移動・削除」で調査番号を選択してください。')};
+
 by('surveyClose').onclick=()=>hideSurveyDialog();
 for(const [id,key] of [['surveyMemo','memo'],['surveyInstruction','instruction']])by(id).addEventListener('input',()=>{if(!activeId||!records[activeId])return;records[activeId][key]=by(id).value;queueSave();renderList()});
 async function photos(e){if(!activeId){status('先に番号を選択してください');return}const r=records[activeId];if(!r)return;for(const f of [...e.target.files]){if(!f.type.startsWith('image/'))continue;if(f.size>15*1024*1024){status('15MBを超える写真は追加できません');continue}const data=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(f)});r.photos.push({name:safeName(f.name),data})}e.target.value='';renderPhotos();renderList();queueSave()}
@@ -366,13 +366,14 @@ window.surveyPDFLoaded=async(project)=>{
 by('surveyExcelExport').onclick=async()=>{
  const btn=by('surveyExcelExport');
  if(btn.disabled)return;
+ status('Excel調査報告書の出力を受け付けました。');
  if(!doc||storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
   status('写真台帳の出力前に編集済みPDFを開き、調査記録の読み込み完了を確認してください。');return;
  }
  if(typeof window.fieldSurveyExcelExport!=='function'){status('Excel出力の準備ができていません。画面を再読み込みしてください。');return}
  const ordered=documentPins().sort((a,b)=>currentPageNumber(a.pageId)-currentPageNumber(b.pageId)||Number(a.o.surveyNumber)-Number(b.o.surveyNumber));
  if(!ordered.length){status('調査番号がないため、Excel報告書を作成できません。');return}
- btn.disabled=true;status('現場調査写真台帳を作成しています…');
+ btn.disabled=true;status('Excel調査報告書を作成しています…');
  try{
   const entries=ordered.map(({pageId,o})=>{
    const r=records[o.surveyId]||{};
@@ -380,7 +381,7 @@ by('surveyExcelExport').onclick=async()=>{
     photos:(r.photos||[]).map(p=>({data:p.data,name:p.name||''}))};
   });
   await window.fieldSurveyExcelExport({siteId,entries});
-  status('Excel写真台帳を出力しました。元のPDFや調査記録は変更していません。');
+  status('Excel調査報告書を出力しました。ダウンロードフォルダーをご確認ください。元のPDFは変更していません。');
  }catch(err){console.error('Excel photo ledger export failed:',err);status('Excel写真台帳を出力できませんでした：'+err.message)}
  finally{btn.disabled=false}
 };
@@ -389,6 +390,7 @@ by('surveyExcelExport').onclick=async()=>{
 by('surveyPhotoZipExport').onclick=()=>{
  const btn=by('surveyPhotoZipExport');
  if(btn.disabled)return;
+ status('調査写真ZIPの出力を受け付けました。');
  if(!doc||storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
   status('写真ZIP出力前に編集済みPDFを開き、調査記録の読み込み完了を確認してください。');return;
  }
