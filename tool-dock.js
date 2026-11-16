@@ -15,10 +15,20 @@
   editPanel.id='dockEditSettings';editPanel.className='dock-edit-settings';
   const editSummary=document.createElement('summary');editSummary.textContent='色・文字・線の設定';
   editPanel.append(editSummary);
-  for(const selector of [':scope > h3',':scope > .palette',':scope > #inlineLineProperties',':scope > .settings',':scope > .text-style-controls',':scope > #editor']){
+  for(const selector of [':scope > h3',':scope > .palette',':scope > #inlineLineProperties',':scope > .settings',':scope > .text-style-controls']){
     const el=annotationTools?.querySelector(selector);
     if(el)editPanel.append(el);
   }
+  // Reparent the ORIGINAL width controls just below the font section.
+  // Keep the original input IDs and app.js listeners. The rest of #editor
+  // remains in the DOM, hidden from the layout, for legacy handlers.
+  const lineWidthRow=document.getElementById('editLineRow');
+  if(lineWidthRow){
+    lineWidthRow.classList.add('standalone-line-width');
+    editPanel.append(lineWidthRow);
+  }
+  const legacyEditor=document.getElementById('editor');
+  if(legacyEditor)editPanel.append(legacyEditor);
   // Keep the original editor controls and listeners, but show them in a
   // full-size floating panel instead of the small scroll-clipped tool dock.
   const editTrigger=document.createElement('button');
