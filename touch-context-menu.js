@@ -8,7 +8,7 @@
  const by=id=>document.getElementById(id);
  let press=null,lastTap=null;
  const DOUBLE_TAP_MS=430,DRIFT_PX=17;
- const PEN_HOLD_MS=650,PEN_HOLD_DRIFT=12;
+ const PEN_HOLD_MS=650,PEN_HOLD_DRIFT=22;
  let stylusHold=null;
  function hasSurveyPin(payload){
    if(!payload)return false;
@@ -109,7 +109,7 @@
    showAt(ev.clientX,ev.clientY);
    say('ダブルタップメニュー：切り取り・コピー・複製・貼り付けが使えます。');
  }
- // A recognized pen can hold an ordinary object to open the SAME context
+ // A recognized pen can hold an ordinary object in ANY active tool mode to open the SAME context
  // actions as finger double-tap. Do not route the held pen to the editor:
  // this prevents accidental movement/resize while the hold timer runs.
  function finishStylusHold(){
@@ -118,7 +118,7 @@
  }
  canvas.addEventListener('pointerdown',ev=>{
    if(ev.pointerType!=='pen'||ev.button!==0||!ev.isPrimary||
-      !doc||rendering||pageBusy||tool!=='select')return;
+      !doc||rendering||pageBusy)return;
    if(by('surveyPinMode')?.getAttribute('aria-pressed')==='true')return;
    const idx=topAnnotationAt(point(ev));
    if(idx<0||list()[idx]?.surveyId)return; // survey pins belong to photo/memo
@@ -152,6 +152,7 @@
    if(!state.opened&&!state.moved&&pageEntries[page-1]?.id===state.pageId){
      const hit=list().indexOf(state.object);
      if(hit>=0){
+       if(tool!=='select')desktopSetTool('select',false);
        selectIndices([hit]);syncEditor();draw();
        canvas.dispatchEvent(new Event('annotation-pen-selected'));
      }
