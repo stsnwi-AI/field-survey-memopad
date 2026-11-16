@@ -110,7 +110,6 @@ window.fieldSurveyExcelExport=async payload=>{
  a.href=url;a.download='現場調査報告書_'+new Date().toISOString().slice(0,10)+'.xlsx';
  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 };
-}
 /* v1.4.29: original survey photos only (no PDF, memo or spreadsheet). */
 window.fieldSurveyPhotoZipExport=payload=>{
  if(!payload||!Array.isArray(payload.entries))throw Error('調査写真の記録がありません');
