@@ -86,6 +86,48 @@
       if(field&&!field.hidden)field.focus({preventScroll:true});
     });
   });
+  // Open the same appearance palette after a deliberate tap/click that
+  // selects an existing annotation. Do not react to drags or blank panning.
+  // The survey photo/memo modal always takes precedence over this palette.
+  let selectionPress=null;
+  canvas?.addEventListener('pointerdown',e=>{
+    selectionPress=null;
+    if(e.button!==0||!doc||pageBusy||rendering||!e.isPrimary)return;
+    const hit=topAnnotationAt(point(e));
+    if(hit<0)return;
+    selectionPress={id:e.pointerId,x:e.clientX,y:e.clientY,
+      pageId:pageEntries[page-1]?.id,object:list()[hit],hit};
+  },true);
+  function openSelectedPalette(){
+    if(!doc||pageBusy||rendering||document.getElementById('surveyDialog')?.open)return;
+    const chosen=selectionIndices();
+    if(!chosen.length)return;
+    showEditSettings(true);
+    window.syncInlineLineProperties?.();
+  }
+  canvas?.addEventListener('pointerup',e=>{
+    const press=selectionPress;
+    selectionPress=null;
+    if(!press||e.pointerId!==press.id||!doc||pageBusy||rendering)return;
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)>12)return;
+    if(pageEntries[page-1]?.id!==press.pageId)return;
+    // Let the existing editor/touch handler finish the selection first.
+    queueMicrotask(()=>{
+      if(!doc||document.getElementById('surveyDialog')?.open)return;
+      const idx=list().indexOf(press.object);
+      if(idx<0||!selectionIndices().includes(idx))return;
+      openSelectedPalette();
+    });
+  });
+  canvas?.addEventListener('pointercancel',()=>{selectionPress=null});
+  // The survey-pin stylus hold handler consumes its pointer events.
+  // Its short-tap path announces the completed selection separately.
+  canvas?.addEventListener('survey-pin-selected',()=>queueMicrotask(openSelectedPalette));
+  const surveyDialog=document.getElementById('surveyDialog');
+  if(surveyDialog)new MutationObserver(()=>{
+    if(surveyDialog.open)showEditSettings(false);
+  }).observe(surveyDialog,{attributes:true,attributeFilter:['open']});
+
   editPanel.addEventListener('toggle',()=>{
     editTrigger.classList.toggle('active',editPanel.open);
     editTrigger.setAttribute('aria-expanded',String(editPanel.open));
