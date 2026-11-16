@@ -8,6 +8,8 @@
  const by=id=>document.getElementById(id);
  let press=null,lastTap=null;
  const DOUBLE_TAP_MS=430,DRIFT_PX=17;
+ const PEN_HOLD_MS=650,PEN_HOLD_DRIFT=12;
+ let stylusHold=null;
  function hasSurveyPin(payload){
    if(!payload)return false;
    return payload.type==='selection'
@@ -107,6 +109,64 @@
    showAt(ev.clientX,ev.clientY);
    say('ダブルタップメニュー：切り取り・コピー・複製・貼り付けが使えます。');
  }
+ // A recognized pen can hold an ordinary object to open the SAME context
+ // actions as finger double-tap. Do not route the held pen to the editor:
+ // this prevents accidental movement/resize while the hold timer runs.
+ function finishStylusHold(){
+   if(stylusHold?.timer)clearTimeout(stylusHold.timer);
+   stylusHold=null;
+ }
+ canvas.addEventListener('pointerdown',ev=>{
+   if(ev.pointerType!=='pen'||ev.button!==0||!ev.isPrimary||
+      !doc||rendering||pageBusy||tool!=='select')return;
+   if(by('surveyPinMode')?.getAttribute('aria-pressed')==='true')return;
+   const idx=topAnnotationAt(point(ev));
+   if(idx<0||list()[idx]?.surveyId)return; // survey pins belong to photo/memo
+   finishStylusHold();lastTap=null;press=null;
+   const state={id:ev.pointerId,object:list()[idx],pageId:pageEntries[page-1].id,
+     x:ev.clientX,y:ev.clientY,moved:false,opened:false,timer:null};
+   stylusHold=state;
+   state.timer=setTimeout(()=>{
+     if(stylusHold!==state||state.moved||!doc||rendering||pageBusy||
+        pageEntries[page-1]?.id!==state.pageId)return;
+     const hit=list().indexOf(state.object);
+     if(hit<0)return;
+     state.opened=true;
+     openOnDoubleTap({clientX:state.x,clientY:state.y},hit);
+   },PEN_HOLD_MS);
+   canvas.setPointerCapture(ev.pointerId);
+   ev.preventDefault();ev.stopImmediatePropagation();
+ },true);
+ canvas.addEventListener('pointermove',ev=>{
+   const state=stylusHold;
+   if(!state||state.id!==ev.pointerId)return;
+   if(Math.hypot(ev.clientX-state.x,ev.clientY-state.y)>PEN_HOLD_DRIFT){
+     state.moved=true;clearTimeout(state.timer);
+   }
+   ev.preventDefault();ev.stopImmediatePropagation();
+ },true);
+ canvas.addEventListener('pointerup',ev=>{
+   const state=stylusHold;
+   if(!state||state.id!==ev.pointerId)return;
+   // A quick stationary pen tap still selects the object normally.
+   if(!state.opened&&!state.moved&&pageEntries[page-1]?.id===state.pageId){
+     const hit=list().indexOf(state.object);
+     if(hit>=0){
+       selectIndices([hit]);syncEditor();draw();
+       canvas.dispatchEvent(new Event('annotation-pen-selected'));
+     }
+   }
+   finishStylusHold();
+   ev.preventDefault();ev.stopImmediatePropagation();
+ },true);
+ canvas.addEventListener('pointercancel',ev=>{
+   if(stylusHold?.id!==ev.pointerId)return;
+   finishStylusHold();
+   ev.preventDefault();ev.stopImmediatePropagation();
+ },true);
+ canvas.addEventListener('contextmenu',ev=>{
+   if(stylusHold){ev.preventDefault();ev.stopImmediatePropagation();}
+ },true);
  canvas.addEventListener('pointerdown',ev=>{
    if(!menu.hidden)hideMenu();
    press=null;
