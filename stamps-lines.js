@@ -13,18 +13,20 @@ if(instructionButton){
  for(const text of ['要修正','位置確認','施工済','写真撮影']){
   const button=document.createElement('button');button.type='button';button.textContent=text;
   button.title=text+'の指示ピンを配置する';
-  button.onclick=()=>{choices.hidden=true;instructionButton.setAttribute('aria-expanded','false');prepareStamp(text,false,true)};
+  button.onclick=()=>{choices.hidden=true;instructionButton.classList.remove('menu-open');instructionButton.setAttribute('aria-expanded','false');prepareStamp(text,false,true);instructionButton.title='指示スタンプ：'+text+'（図面をタップして配置）';};
   choices.append(button);
  }
  document.getElementById('surveyToolDock').append(choices);
  instructionButton.onclick=()=>{
   const open=choices.hidden;choices.hidden=!open;
   instructionButton.setAttribute('aria-expanded',String(open));
+  instructionButton.classList.toggle('menu-open',open);
+  instructionButton.setAttribute('aria-pressed',String(open||((typeof tool!=='undefined')&&tool==='stamp'&&stampPreset?.shape==='instruction-pin')));
   if(open&&typeof doc!=='undefined'&&!doc){document.getElementById('status').textContent='PDFを開いてから指示スタンプを配置してください。';}
  };
  document.addEventListener('pointerdown',e=>{
   if(!choices.hidden&&!choices.contains(e.target)&&!instructionButton.contains(e.target)){
-   choices.hidden=true;instructionButton.setAttribute('aria-expanded','false');
+   choices.hidden=true;instructionButton.classList.remove('menu-open');instructionButton.setAttribute('aria-expanded','false');
   }
  },true);
 }
