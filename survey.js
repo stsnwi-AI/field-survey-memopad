@@ -385,6 +385,24 @@ by('surveyExcelExport').onclick=async()=>{
  finally{btn.disabled=false}
 };
 
+// v1.4.29: ZIP with original images only; read-only export from current document records.
+by('surveyPhotoZipExport').onclick=()=>{
+ const btn=by('surveyPhotoZipExport');
+ if(btn.disabled)return;
+ if(!doc||storageLoading||window.__surveyPdfLoading||!activeStorageKey||activeStorageKey!==documentStorageKey()){
+  status('写真ZIP出力前に編集済みPDFを開き、調査記録の読み込み完了を確認してください。');return;
+ }
+ if(typeof window.fieldSurveyPhotoZipExport!=='function'){
+  status('写真ZIP出力の準備ができていません。画面を再読み込みしてください。');return;
+ }
+ const ordered=documentPins().sort((a,b)=>currentPageNumber(a.pageId)-currentPageNumber(b.pageId)||Number(a.o.surveyNumber)-Number(b.o.surveyNumber));
+ const entries=ordered.map(({pageId,o})=>({page:currentPageNumber(pageId),no:o.surveyNumber,photos:(records[o.surveyId]?.photos||[]).map(p=>({data:p.data}))}));
+ btn.disabled=true;
+ try{const count=window.fieldSurveyPhotoZipExport({entries});status('調査写真'+count+'枚をZIP出力しました。元のPDF・写真は変更していません。')}
+ catch(err){console.error('Photo ZIP export failed',err);status('写真ZIPを出力できませんでした：'+err.message)}
+ finally{btn.disabled=false}
+};
+
 // Existing annotations are owned by the original editor; reflect page edits and deleted pins in the survey list.
 setInterval(()=>{if(!window.__surveyPdfLoading&&!bundleBusy&&documentStorageKey()!==activeStorageKey&&!storageLoading)void syncDocumentRecords();const count=pins().length;const pg=getPage();if(count!==window.__surveyCount||pg!==window.__surveyPage){window.__surveyCount=count;window.__surveyPage=pg;if(activeId&&!pins().some(p=>p.o.surveyId===activeId)){activeId=null;hideSurveyDialog()}renderList()}},600);
 try{siteId=validateSite(localStorage.getItem(PREFIX+':siteId'))||''}catch(e){siteId=''}siteField.value=siteId;siteLabel();
