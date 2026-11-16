@@ -57,6 +57,25 @@
     }
   }
   editTrigger.addEventListener('click',()=>showEditSettings(!editPanel.open));
+  // Double-click an existing annotation to edit its appearance immediately.
+  // Survey-photo pins retain their own double-tap/photo-record workflow.
+  const canvas=document.getElementById('overlay');
+  canvas?.addEventListener('dblclick',e=>{
+    if(typeof doc==='undefined'||!doc||pageBusy||rendering)return;
+    const hit=topAnnotationAt(point(e));
+    if(hit<0)return;
+    const object=list()[hit];
+    if(object?.surveyId||object?.shape==='survey-pin')return;
+    if(tool!=='select')setTool('select',false);
+    selectIndices([hit]);syncEditor();draw();
+    showEditSettings(true);
+    // Opening the panel does not alter the object or start drawing.
+    window.syncInlineLineProperties?.();
+    if(object?.type==='text')requestAnimationFrame(()=>{
+      const field=document.getElementById('editText');
+      if(field&&!field.hidden)field.focus({preventScroll:true});
+    });
+  });
   editPanel.addEventListener('toggle',()=>{
     editTrigger.classList.toggle('active',editPanel.open);
     editTrigger.setAttribute('aria-expanded',String(editPanel.open));
