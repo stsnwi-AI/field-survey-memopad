@@ -581,3 +581,31 @@ body.survey-horizontal-editor main>.workspace{
  #surveyToolDock.dock-horizontal #tools>button{min-width:44px!important;max-width:44px!important;width:44px!important}
  #surveyToolDock.dock-horizontal .dock-title{display:none!important}
 }
+
+/* v1.4.36: hide redundant settings-panel commands without removing their handlers/data. */
+#surveySettingsPanel #stampBox,
+#surveySettingsPanel #mobileMoreActions{display:none!important}
+
+/* Instruction choices render in document.body, anchored to the stamp tool button.
+   They no longer share a dropdown origin with color/type/line settings. */
+body>#instructionPinChoices[hidden]{display:none!important}
+body>#instructionPinChoices{
+ position:fixed!important;z-index:180!important;box-sizing:border-box!important;
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:4px!important;padding:5px!important;
+ border:1px solid #9cb8c9!important;border-radius:8px!important;
+ background:#f6fafc!important;box-shadow:0 5px 18px #102b3b45!important;
+ max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px)!important;
+ overflow-y:auto!important;
+}
+body>#instructionPinChoices button{
+ box-sizing:border-box!important;min-width:0!important;min-height:40px!important;
+ font-size:11px!important;font-weight:700!important;line-height:1.2!important;
+ padding:6px 3px!important;border:1px solid #bfd0da!important;
+ border-radius:6px!important;color:#173f54!important;background:#fff!important;
+ white-space:nowrap!important;touch-action:manipulation;
+}
+body>#instructionPinChoices button:focus-visible,
+body>#instructionPinChoices button:hover{
+ background:#dcecf7!important;border-color:#27678c!important;outline:2px solid #27678c!important;
+}
