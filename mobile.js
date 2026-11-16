@@ -83,9 +83,12 @@ canvas.onpointerdown=e=>{if(e.pointerType!=='touch'){if(e.pointerType==='pen'&&w
  // Any other one-finger drag pans the drawing (including object backgrounds).
  // A single stationary tap selects an object and arms its edit mode.
  const hitAtDown=topAnnotationAt(point(e));
- const dragSelected=tool==='select'&&touchMode==='edit'&&!window.fieldStylusMode&&
+ const dragSelected=tool==='select'&&
    hitAtDown>=0&&selectionIndices().includes(hitAtDown);
- if(window.fieldStylusMode||touchMode==='browse'||(tool==='select'&&!dragSelected&&!window.multiSelectTouch)){
+ // A selected object must remain draggable even when a recognized pen has
+ // switched the tablet into pen-first mode; blank drags still pan the page.
+ if(((window.fieldStylusMode||touchMode==='browse')&&!dragSelected)||
+    (tool==='select'&&!dragSelected&&!window.multiSelectTouch)){
    gesture={pan:true,...edgeSwipeStart(e.clientX,e.clientY)};return
  }
  selectionTouchStart=tool==='select'?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;const at=point(e);if(tool!=='select'&&list().some(o=>{return hitAnnotation(o,at)}))setTool('select',false);touchCheckpoint={items:JSON.parse(JSON.stringify(items)),historyLength:history.length,redo:redoStack.slice(),dirty,selected,indices:selectionIndices()};originalTouchHandlers.down(e)};
@@ -109,14 +112,14 @@ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?orig
      }
      // Select on first tap; allow the *next* drag of this same object to
      // move/resize it. Blank taps restore the original finger pan behavior.
-     if(!window.fieldStylusMode&&!window.multiSelectTouch){
+     if(!window.multiSelectTouch){
        if(hit>=0)setTouchMode('edit',false);
        else setTouchMode('browse',false);
      }
      syncEditor();draw();
    }
  }
- else if(!touchConsumed&&!window.fieldStylusMode&&touchMode==='edit'){
+ else if(!touchConsumed&&touchMode==='edit'){
    const finishedMovingSelection=tool==='select'&&!window.multiSelectTouch&&
      selectionTouchStart?.id===e.pointerId&&
      Math.hypot(e.clientX-selectionTouchStart.x,e.clientY-selectionTouchStart.y)>12;
