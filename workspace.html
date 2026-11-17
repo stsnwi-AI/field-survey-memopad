@@ -23,11 +23,86 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 #empty h2{margin:0;font-size:21px}#empty p{margin:0;font-size:14px}#empty .first-file{margin:4px auto 2px;min-height:48px;padding:11px 20px;background:#e7f1f6;border:2px solid #8ab4ca;color:#184c68;cursor:pointer}
 #status{font-size:12px;position:fixed;bottom:6px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;background:#fffef2e8;border-radius:6px;z-index:8;pointer-events:none}
 @media(max-width:650px){header{height:50px;padding:4px 7px}header strong{font-size:12px}header small{display:none}.add{padding:7px 9px;font-size:12px}#tabs{height:45px}#workspace{height:calc(100dvh - 95px)}.tab-wrap{min-width:120px;max-width:205px}.tab{max-width:155px}}
+ 
+/* v1.4.53: restore original illustrated welcome visual on the default workspace.
+   No PDF data / editor interactions changed. */
+#workspace:has(#empty:not([hidden])){overflow-y:auto;background:#f2f6f8}
+#empty.home-welcome{
+ display:flex;align-items:flex-start;justify-content:center;
+ min-height:100%;height:auto;padding:clamp(16px,3vh,34px) 12px 48px;
+ color:#24485b;text-align:center;
+}
+#empty.home-welcome[hidden]{display:none!important}
+.home-welcome-card{
+ width:min(760px,100%);padding:clamp(18px,3vw,32px);
+ background:#fbfdfe;border:1px solid #c5d6df;
+ border-top:4px solid #df9b3d;border-radius:12px;
+ box-shadow:0 8px 28px #183f5416;
+}
+.home-welcome .hero-art{width:min(440px,95%);margin:0 auto 16px}
+.home-welcome .hero-art svg{width:100%;height:auto;display:block}
+.home-welcome .welcome-chip{
+ display:inline-flex;align-items:center;gap:7px;
+ background:#1c465c;color:#fff;border-radius:6px;
+ padding:7px 13px;font-size:11px;font-weight:750;letter-spacing:.045em
+}
+.home-welcome .welcome-chip .ui-icon{width:15px;height:15px;color:#ffc873}
+.home-welcome h1{font-size:clamp(22px,3vw,32px);color:#173e52;margin:16px 0 10px}
+.home-welcome p{font-size:clamp(12px,1.6vw,14px);line-height:1.8;color:#476475}
+.home-welcome .first-file{
+ display:inline-flex;margin:12px auto 8px;min-height:50px;
+ padding:13px 23px;background:#df8427;color:white;
+ border:2px solid #c3731d;border-radius:8px;
+ box-shadow:0 3px 8px #b16c2424;font-size:15px;cursor:pointer
+}
+.home-welcome .first-file:hover{background:#ca7521;color:white}
+.home-welcome .first-file:focus-within{
+ outline:3px solid #2b7baa;outline-offset:3px
+}
+.home-welcome .welcome-features{
+ display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0
+}
+.home-welcome .welcome-features span{
+ display:inline-flex;align-items:center;gap:6px;padding:8px 11px;
+ background:#eef5f9;border:1px solid #c7dce6;border-radius:6px;
+ color:#2a5367;font-size:12px;font-weight:600
+}
+.home-welcome .welcome-features .ui-icon{width:17px;height:17px}
+.home-welcome .home-save-reminder{font-size:11px;color:#607788;margin-top:16px}
+.home-welcome .home-subtext{font-weight:550}
+@media(max-width:600px){
+ #empty.home-welcome{padding:10px 8px 32px}
+ .home-welcome-card{padding:14px 12px;border-radius:8px}
+ .home-welcome .hero-art{width:min(330px,96%);margin-bottom:10px}
+ .home-welcome h1{margin:11px 0 8px}
+ .home-welcome .first-file{width:100%;justify-content:center}
+ .home-welcome .welcome-features span{font-size:11px;padding:7px 9px}
+}
 </style></head><body>
-<header><div><strong>現場調査メモパッド｜PDFタブ・縦スクロール</strong><small> Ver.1.4.52-dev ／図面ごとに編集状態を保持</small></div>
+<header><div><strong>現場調査メモパッド｜PDFタブ・縦スクロール</strong><small> Ver.1.4.53-dev ／図面ごとに編集状態を保持</small></div>
 <div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
 <nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
-<main id="workspace"><div id="empty"><h2>図面を開いて現場調査を始める</h2><p>最初はPDF1枚で作業できます。あとから追加したPDFを上のタブで切り替え、各PDFの書き込みを保持します。</p><label class="add first-file" for="addFiles"><span>＋ 1枚目のPDFを開く</span></label><p>各PDFは縦スクロールでページを連続表示します。終了前に「編集済みPDFを保存」を押してください。</p></div></main>
+<main id="workspace"><div id="empty" class="home-welcome">
+<div class="home-welcome-card"><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 440 224" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg">
+<rect x="6" y="8" width="428" height="207" rx="8" fill="#e1eaee" stroke="#91aebc" stroke-width="2"/>
+<rect x="22" y="22" width="396" height="173" fill="#f9fcfd" stroke="#6e97a9" stroke-width="1.4"/>
+<path d="M22 53H418M54 22V195M235 22V195M320 22V195M54 115H320M235 148H418" stroke="#8aa9b6" stroke-width="2" fill="none"/>
+<path d="M96 53V115H164V158H235M270 22V83H320" fill="none" stroke="#b7cbd3" stroke-width="1.6" stroke-dasharray="5 4"/>
+<path d="M84 168 L127 168 L155 137 L207 137 L262 83 L350 83" stroke="#e18c22" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M80 164l8 8m0-8-8 8" stroke="#e18c22" stroke-width="3"/>
+<rect x="172" y="93" width="33" height="27" fill="#f5e7d2" stroke="#e18c22" stroke-width="2"/><path d="M177 107h23" stroke="#d48a2e"/>
+<circle cx="155" cy="137" r="16" fill="#df8022" stroke="white" stroke-width="3"/><text x="155" y="142" fill="white" text-anchor="middle" font-size="11" font-weight="800" font-family="Arial">001</text>
+<circle cx="263" cy="83" r="16" fill="#df8022" stroke="white" stroke-width="3"/><text x="263" y="88" fill="white" text-anchor="middle" font-size="11" font-weight="800" font-family="Arial">002</text>
+<circle cx="349" cy="83" r="16" fill="#df8022" stroke="white" stroke-width="3"/><text x="349" y="88" fill="white" text-anchor="middle" font-size="11" font-weight="800" font-family="Arial">003</text>
+<rect x="22" y="195" width="396" height="20" fill="#173e50"/>
+<text x="33" y="209" fill="#fff" font-size="10" font-weight="700" font-family="Arial">FIELD SURVEY // PLAN MARKUP</text>
+<text x="404" y="209" fill="#ffca6d" text-anchor="end" font-size="10" font-family="Arial">001 — 003</text>
+</svg></div><div class="welcome-chip"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg>FIELD SURVEY / 調査記録・施工指示</div><h1>図面を開いて、現場を記録。</h1><p>調査位置に番号を置き、写真・状況・施工指示をひとまとめに。 配線ルートの手書きや図面編集も、同じ画面で。</p>
+<label class="add first-file" for="addFiles"><span>＋ PDFを開いて調査を始める</span></label>
+<p class="home-subtext">1枚目を編集したまま、別のPDFを追加・切り替えできます。PDFの各ページは縦スクロールで表示します。</p>
+<div class="welcome-features"><span><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M12 6v14M8 20h8M4 6V4m16 2V4"/></svg>図面に記入</span><span><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 3 7 7-8 8-7-7zM5 11l-2 7 7-2M3 21h17"/></svg>調査位置に番号</span><span><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="13" height="16" rx="3"/><path d="M4 7v12a2 2 0 0 0 2 2h10M11 8h5M11 12h5"/></svg>図面を整理</span></div>
+<p class="home-save-reminder">調査番号・写真・コメント・書き込みを残すには、各PDFの「編集済みPDFを保存」を使用してください。</p>
+</div></div></main>
 <div id="status" role="status" aria-live="polite">PDFのタブはこの画面を開いている間保持されます。再読み込みすると開き直しが必要です。</div>
 <script>
 (()=>{'use strict';
