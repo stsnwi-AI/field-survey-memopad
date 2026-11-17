@@ -3,7 +3,7 @@
 <title>現場調査メモパッド | 複数PDFワークスペース</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Yu Gothic",sans-serif;color:#173d53;background:#e8f0f4}
-*{box-sizing:border-box}body{margin:0}header{height:52px;background:#11384b;color:white;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 12px}
+*{box-sizing:border-box}body{margin:0}header{height:52px;background:#173e52;color:white;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 12px}
 header strong{font-size:15px}header small{font-size:11px;color:#cce3ef}header .actions{display:flex;gap:6px;align-items:center}
 button,.add{font:inherit;cursor:pointer;border-radius:7px;border:1px solid #abc4d2;background:white;color:#14394c;padding:8px 10px;min-height:38px;font-size:13px}
 button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
@@ -20,14 +20,14 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 .document-frame{border:0;width:100%;height:100%;position:absolute;inset:0;visibility:hidden;pointer-events:none;background:white}
 .document-frame.active{visibility:visible;pointer-events:auto;z-index:2}
 #empty[hidden]{display:none}#empty{display:grid;place-content:center;height:100%;text-align:center;gap:15px;padding:20px;color:#456579}
-#empty h2{margin:0;font-size:21px}#empty p{margin:0;font-size:14px}
+#empty h2{margin:0;font-size:21px}#empty p{margin:0;font-size:14px}#empty .first-file{margin:4px auto 2px;min-height:48px;padding:11px 20px;background:#e7f1f6;border:2px solid #8ab4ca;color:#184c68;cursor:pointer}
 #status{font-size:12px;position:fixed;bottom:6px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;background:#fffef2e8;border-radius:6px;z-index:8;pointer-events:none}
 @media(max-width:650px){header{height:50px;padding:4px 7px}header strong{font-size:12px}header small{display:none}.add{padding:7px 9px;font-size:12px}#tabs{height:45px}#workspace{height:calc(100dvh - 95px)}.tab-wrap{min-width:120px;max-width:205px}.tab{max-width:155px}}
 </style></head><body>
-<header><div><strong>現場調査メモパッド｜PDFタブ</strong><small> Ver.1.4.51-dev ／図面ごとに編集状態を保持</small></div>
+<header><div><strong>現場調査メモパッド｜PDFタブ・縦スクロール</strong><small> Ver.1.4.52-dev ／図面ごとに編集状態を保持</small></div>
 <div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
 <nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
-<main id="workspace"><div id="empty"><h2>複数のPDFを開いて切り替え</h2><p>「＋ PDFを追加」で複数選択できます。書き込みを残したままタブを切り替えられます。</p><p>編集内容を残してアプリを終了するには、各PDFの「編集済みPDFを保存」を押してください。</p></div></main>
+<main id="workspace"><div id="empty"><h2>図面を開いて現場調査を始める</h2><p>最初はPDF1枚で作業できます。あとから追加したPDFを上のタブで切り替え、各PDFの書き込みを保持します。</p><label class="add first-file" for="addFiles"><span>＋ 1枚目のPDFを開く</span></label><p>各PDFは縦スクロールでページを連続表示します。終了前に「編集済みPDFを保存」を押してください。</p></div></main>
 <div id="status" role="status" aria-live="polite">PDFのタブはこの画面を開いている間保持されます。再読み込みすると開き直しが必要です。</div>
 <script>
 (()=>{'use strict';
