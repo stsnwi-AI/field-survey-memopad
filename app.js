@@ -182,6 +182,23 @@ async function extractEmbeddedProject(data){
   return null;
 }
 async function restoreProject(project){if(project?.format!=='kantan-pdf-project'||![1,2].includes(project.schemaVersion))throw Error('未対応の編集情報です');const raws=project.schemaVersion===2?project.sourcePDFs.map(base64ToBytes):[base64ToBytes(project.originalPdfBase64)];if(!raws.length||raws.length>100)throw Error('元PDFの数が不正です');const staged=[];for(const b of raws)staged.push(await prepareSource(b));const entries=project.schemaVersion===2?project.pageEntries:Array.from({length:staged[0].doc.numPages},(_,i)=>({id:String(i+1),source:0,index:i+1,rotation:0}));if(!Array.isArray(entries)||!entries.length||entries.length>2000||entries.some(e=>!e||!Number.isInteger(e.source)||!staged[e.source]||!Number.isInteger(e.index)||e.index<1||e.index>staged[e.source].doc.numPages||typeof e.id!=='string'||!Number.isFinite(e.rotation)))throw Error('ページ構成が不正です');const annotations=project.annotationsByPage;if(!annotations||typeof annotations!=='object'||Array.isArray(annotations)||Object.values(annotations).some(v=>!Array.isArray(v)||v.some(o=>!validClipboardObject(o))))throw Error('編集オブジェクトが不正です');sources=staged;pageEntries=entries;items=annotations;doc=pageFacade();bytes=raws[0];page=Math.min(Math.max(1,Number(project.currentPage)||1),entries.length);pageChecks.clear();history=[];redoStack=[];selected=-1;dirty=false;$('filename').textContent=project.originalPdfName||'編集済み.pdf';$('save').disabled=false;$('newTabStart').hidden=true;if(Number.isFinite(project.zoom)&&project.zoom>=.15&&project.zoom<=3){window.setPDFZoom?.(project.zoom);if([...$('zoom').options].some(o=>o.value===String(project.zoom)))$('zoom').value=String(project.zoom)};await render();if(!$('pagePanel').hidden)await refreshPageGrid()}
+// In-progress PDF handoff into the multi-tab workspace, entirely local to
+// this browser origin. No PDF is sent to a server and the source stays open.
+window.exportWorkspaceProject=function(){
+ if(!doc||pageBusy||rendering||window.__surveyPdfLoading)throw Error('PDFの処理が完了してから開いてください');
+ if(window.surveyPDFExport&&window.surveyPDFExport()===null)throw Error('調査写真・コメントの読込が完了していません');
+ return {project:makeProject(),history:[...history],redoStack:[...redoStack],dirty:dirty};
+};
+window.restoreWorkspaceProject=async function(project,pastHistory,pastRedo,wasDirty){
+ if(doc)throw Error('既に別のPDFが開かれています');
+ await restoreProject(project);
+ await window.surveyPDFLoaded?.(project);
+ // Copy valid undo snapshots only after the PDF and annotations are restored.
+ if(Array.isArray(pastHistory)&&pastHistory.every(x=>typeof x==='string'))history=pastHistory.slice(-60);
+ if(Array.isArray(pastRedo)&&pastRedo.every(x=>typeof x==='string'))redoStack=pastRedo.slice(-60);
+ dirty=Boolean(wasDirty);
+ draw();
+};
 function downloadProject(){if(!doc)return;const blob=new Blob([JSON.stringify(makeProject())],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=$('filename').textContent.replace(/\.pdf$/i,'')+'.pdfproj';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);say('プロジェクトをダウンロードしました。保存先を確認してください。')}
 
 
