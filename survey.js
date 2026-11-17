@@ -192,6 +192,18 @@ function markPin(x,y){if(!activeStorageKey||activeStorageKey!==documentStorageKe
 // Right-click (mouse) / one-finger tap (touch) while placement mode is active.
 // Continuous mode keeps placement enabled; other editing interactions stay unchanged when it is OFF.
 let lastTouchPlacement=0;
+const SURVEY_PIN_GUARD_MS=850;
+let previousPinPlacedAt=0,previousPinPoint=null;
+// Deliberately prevent second and duplicate pointer events from creating
+// adjacent numbers. Continuous numbering still works after the guard interval.
+function recentlyPlacedPin(p){
+ const elapsed=Date.now()-previousPinPlacedAt;
+ return elapsed>=0&&elapsed<SURVEY_PIN_GUARD_MS;
+}
+function nearbyExistingSurveyPin(p){
+ return list().some(o=>o.surveyId&&hitAnnotation(o,p));
+}
+
 function setPlace(v){
  placing=!!v;
  const btn=by('surveyPinMode');btn.setAttribute('aria-pressed',String(placing));
@@ -206,12 +218,23 @@ function placeFromEvent(e){
  e.preventDefault();e.stopImmediatePropagation();
  const p=point(e);
  if(!Number.isFinite(p.x)||!Number.isFinite(p.y))return false;
- // A right-click on an existing survey pin must never create an overlapping number.
- if(e.type==='contextmenu' && list().some(o=>o.surveyId && hitAnnotation(o,p))){
-  status('既存の番号は左ダブルクリックで写真・コメントを編集してください。');return true;
+ // This guard must run for pen, finger and contextmenu, before changing the
+ // PDF or allocating a new surveyId. It also absorbs a double-tap's second event.
+ if(recentlyPlacedPin(p)){
+  status('連続タッチによる調査番号の重複配置を防止しました。');
+  return true;
+ }
+ // Existing numbered markers are never overwritten by another placement.
+ if(nearbyExistingSurveyPin(p)){
+  status('既存の調査番号の上には重ねて配置しません。');
+  return true;
  }
  // Always advance only through markPin's normal validated construction path.
+ const countBefore=list().length;
  markPin(p.x,p.y);
+ if(list().length<=countBefore)return true;
+ previousPinPlacedAt=Date.now();previousPinPoint={x:p.x,y:p.y};
+ lastTouchPlacement=previousPinPlacedAt;
  if(!by('surveyContinuous').checked)setPlace(false);
  else{canvas.style.cursor='crosshair';status('番号を配置しました。続けて配置できます。');}
  return true;
@@ -227,7 +250,7 @@ canvas.addEventListener('pointerdown',e=>{
  if(!placing)return;
  if(e.pointerType==='touch'&&!window.fieldStylusMode&&e.isPrimary&&e.button===0){
   if(placeFromEvent(e))lastTouchPlacement=Date.now();
- }else if(e.pointerType==='pen'&&e.button===0){
+ }else if(e.pointerType==='pen'&&e.button===0&&e.isPrimary){
   placeFromEvent(e);
  }
  // Mouse left click keeps standard editing behavior. Right click is handled by contextmenu.
