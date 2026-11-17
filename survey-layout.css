@@ -862,3 +862,28 @@ body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
  filter:saturate(.8)!important;
  cursor:not-allowed!important;
 }
+
+/* v1.4.50: ACTUAL survey quick-action buttons in the top and floating dock. */
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="false"],
+#surveyToolDock.dock-horizontal #tools #surveyPalettePin[aria-pressed="false"]{
+ background:#e5ebef!important;color:#244456!important;
+ border:2px solid #9cb3c0!important;box-shadow:none!important;
+}
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="true"],
+#surveyToolDock.dock-horizontal #tools #surveyPalettePin[aria-pressed="true"]{
+ background:#e97a14!important;color:white!important;
+ border:2px solid #a85109!important;
+}
+#surveyToolDock #tools #surveyPaletteDelete,
+#surveyToolDock.dock-horizontal #tools #surveyPaletteDelete,
+#surveyToolDock.dock-floating #tools #surveyPaletteDelete,
+#surveyToolDock #tools #surveyPaletteDelete:disabled{
+ background:#bd202e!important;color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+ border:2px solid #87121d!important;
+ box-shadow:0 2px 5px #79152350!important;
+ opacity:1!important;
+}
+#surveyToolDock #tools #surveyPaletteDelete .ui-icon{
+ color:#fff!important;stroke:#fff!important;
+}
