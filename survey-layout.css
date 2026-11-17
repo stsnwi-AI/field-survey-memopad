@@ -767,3 +767,11 @@ body>#dockEditSettings #editLineRow .line-width-buttons button{
  min-width:40px!important;min-height:38px!important;padding:4px!important;
 }
 body>#dockEditSettings #editLineRow .line-help{font-size:10px!important}
+
+/* v1.4.45: right-anchored, manual-only appearance panel.
+   No change to the original tool dock or delete button placement. */
+body>#dockEditSettings{
+ right:8px!important;
+ left:auto;
+ max-width:min(370px,calc(100vw - 16px))!important;
+}
