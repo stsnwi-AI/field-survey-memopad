@@ -887,3 +887,25 @@ body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
 #surveyToolDock #tools #surveyPaletteDelete .ui-icon{
  color:#fff!important;stroke:#fff!important;
 }
+
+/* Ver.1.4.51: restore a soft red, slightly deeper than the original pale red.
+   Only presentation changes. The actual toolbar delete and legacy delete
+   retain their original click handlers, enablement and confirmation. */
+#surveyToolDock #tools #surveyPaletteDelete,
+#surveyToolDock.dock-horizontal #tools #surveyPaletteDelete,
+#surveyToolDock.dock-floating #tools #surveyPaletteDelete,
+#surveyToolDock #tools #surveyPaletteDelete:disabled,
+#surveyToolDock #delete.dock-delete-action,
+#surveyToolDock #delete.dock-delete-action:disabled {
+ background:#f2cbd1!important;
+ color:#8d3442!important;
+ -webkit-text-fill-color:#8d3442!important;
+ border:2px solid #c9808b!important;
+ box-shadow:none!important;
+ opacity:1!important;
+}
+#surveyToolDock #tools #surveyPaletteDelete .ui-icon,
+#surveyToolDock #delete.dock-delete-action .ui-icon{
+ color:#8d3442!important;
+ stroke:#8d3442!important;
+}
