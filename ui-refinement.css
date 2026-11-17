@@ -1,0 +1,132 @@
+/* Field Survey UI refinement v1.4.51 (2026-11-17)
+ * A single visual-only layer applied after legacy CSS.
+ * Semantics: neutral = browse/tools; soft blue = selection;
+ * orange = active placement; gentle rose = delete; white = editable surface.
+ * No event handlers, tool state, annotation data, or PDF schemas changed.
+ */
+:root{
+ --ui-ink:#1d4053;
+ --ui-muted:#526c7a;
+ --ui-canvas:#f4f8fa;
+ --ui-surface:#f8fbfd;
+ --ui-line:#b8ccd7;
+ --ui-accent:#c77721;
+ --ui-selected:#dcecf5;
+ --ui-delete-bg:#f1d4d9;
+ --ui-delete-border:#d9a0a9;
+ --ui-delete-ink:#963c49;
+}
+#surveyToolDock.dock-horizontal{
+ background:#edf4f7!important;
+ border-top:2px solid #d9a259!important;
+ border-bottom:1px solid #b8cbd6!important;
+ box-shadow:0 2px 8px #25485c18!important;
+ gap:7px!important;
+}
+#surveyToolDock.dock-floating{
+ background:#f1f6f8!important;
+ border-color:#9fb9c8!important;
+ border-top:4px solid #d9a259!important;
+ box-shadow:0 8px 22px #17394e29!important;
+}
+#surveyToolDock #tools button{
+ border:1px solid var(--ui-line)!important;
+ border-radius:7px!important;
+ background:#fff!important;
+ color:var(--ui-ink)!important;
+ min-height:44px!important;
+}
+#surveyToolDock #tools button:not(:disabled):hover{
+ background:#e8f2f7!important;
+ border-color:#8eb7cb!important;
+}
+#surveyToolDock #tools button[data-tool].active,
+#surveyToolDock #tools button[data-tool][aria-pressed="true"]{
+ background:var(--ui-selected)!important;
+ color:#174d6b!important;
+ border:2px solid #558ba6!important;
+ box-shadow:inset 0 0 0 1px #fff!important;
+}
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="true"]{
+ background:#f4dfc4!important;color:#81470b!important;
+ border:2px solid #d08c3c!important;
+ box-shadow:inset 0 0 0 1px #fff!important;
+}
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="false"]{
+ background:#edf2f5!important;color:#3e5b6e!important;
+ border:1px solid #b8cad4!important;
+ box-shadow:none!important;
+}
+/* The real visible Delete icon is surveyPaletteDelete, NOT the legacy #delete.
+   Return to a mild red, slightly stronger than the earlier pale pink. */
+#surveyToolDock #tools #surveyPaletteDelete,
+#surveyToolDock.dock-horizontal #tools #surveyPaletteDelete,
+#surveyToolDock.dock-floating #tools #surveyPaletteDelete,
+#surveyToolDock #tools #surveyPaletteDelete:disabled,
+#surveyToolDock #tools #surveyPaletteDelete:hover{
+ background:var(--ui-delete-bg)!important;
+ color:var(--ui-delete-ink)!important;
+ -webkit-text-fill-color:var(--ui-delete-ink)!important;
+ border:2px solid var(--ui-delete-border)!important;
+ box-shadow:none!important;
+ opacity:1!important;
+ font-weight:750!important;
+}
+#surveyToolDock #tools #surveyPaletteDelete .ui-icon{
+ color:var(--ui-delete-ink)!important;stroke:var(--ui-delete-ink)!important;
+}
+#surveyToolDock #tools #surveyPaletteDelete:focus-visible{
+ outline:3px solid #a75563!important;outline-offset:2px!important;
+}
+/* Legacy delete node remains in DOM for confirm-and-delete handlers, but
+   do not present two different delete buttons next to each other. */
+#surveyToolDock #delete.dock-delete-action{
+ display:none!important;
+}
+#surveyToolDock .dock-edit-trigger,
+#surveyToolDock .dock-mode{
+ background:#fff!important;color:#204b60!important;
+ border:1px solid #a9c1cf!important;
+ border-radius:7px!important;min-height:44px!important;
+}
+#surveyToolDock .dock-edit-trigger[aria-expanded="true"]{
+ background:#dfeef6!important;border:2px solid #6f9db8!important;
+}
+#surveyToolDock #tools button:focus-visible,
+#surveyToolDock .dock-mode:focus-visible,
+#surveyToolDock .dock-edit-trigger:focus-visible,
+#surveyToolDock #delete:focus-visible{
+ outline:3px solid #ca832a!important;outline-offset:2px!important;
+}
+#surveyToolDock .dock-selected-label{
+ background:#e6f0f5!important;
+ color:#27495c!important;
+ border:1px solid #c4d6df!important;
+ border-radius:6px!important;
+ font-weight:600!important;
+}
+body>#dockEditSettings[open]{
+ background:#fafcfd!important;border:1px solid #99b8c9!important;
+ box-shadow:0 9px 25px #17394d30!important;
+}
+#fixedPageNav{box-shadow:0 2px 9px #15364829!important}
+#fixedPageNav button:focus-visible,#fixedPageNav select:focus-visible{
+ outline:3px solid #dc902a!important;outline-offset:2px!important;
+}
+#surveySettingsToggle{
+ background:#264e64!important;border-color:#8baec1!important;
+ box-shadow:0 3px 10px #16394b38!important;
+}
+/* One row, swipeable; icon sizes remain touch friendly without covering PDF. */
+#surveyToolDock.dock-horizontal .dock-tools{
+ overflow-x:auto!important;overscroll-behavior-x:contain;
+ -webkit-overflow-scrolling:touch;
+}
+#surveyToolDock.dock-horizontal #tools{gap:5px!important}
+#surveyToolDock.dock-horizontal #tools button{
+ min-height:44px!important;
+}
+@media(max-width:750px){
+ #surveyToolDock.dock-horizontal{gap:4px!important}
+ #surveyToolDock.dock-horizontal #tools button{min-width:44px!important}
+}
