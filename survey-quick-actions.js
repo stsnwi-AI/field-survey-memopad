@@ -37,6 +37,9 @@
     }
   }, true);
   originalPin.addEventListener('click', () => queueMicrotask(syncPin));
+  // User placement on the PDF switches survey.js OFF without clicking the
+  // original button. That state must update the visible palette icon now.
+  originalPin.addEventListener('survey-placement-changed', syncPin);
 
   remove.addEventListener('click', () => {
     if ((typeof doc === 'undefined' || !doc) || typeof selectionIndices !== 'function' || !selectionIndices().length) {
@@ -70,5 +73,6 @@
   }
   const originalSync=()=>{const current=pin.querySelector('span')?.textContent?.trim();if(current){labels.set(pin,current);pin.setAttribute('aria-label',current)}};
   originalPin.addEventListener('click',()=>queueMicrotask(originalSync));
+  originalPin.addEventListener('survey-placement-changed',originalSync);
   originalSync();
 })();
