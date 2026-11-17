@@ -8,7 +8,7 @@
  const by=id=>document.getElementById(id);
  let press=null,lastTap=null;
  const DOUBLE_TAP_MS=430,DRIFT_PX=17;
- const PEN_HOLD_MS=650,PEN_HOLD_DRIFT=22;
+ const PEN_HOLD_MS=650,PEN_HOLD_DRIFT=9;
  let stylusHold=null;
  function hasSurveyPin(payload){
    if(!payload)return false;
@@ -124,7 +124,8 @@
    if(idx<0||list()[idx]?.surveyId)return; // survey pins belong to photo/memo
    finishStylusHold();lastTap=null;press=null;
    const state={id:ev.pointerId,object:list()[idx],pageId:pageEntries[page-1].id,
-     x:ev.clientX,y:ev.clientY,moved:false,opened:false,timer:null};
+     x:ev.clientX,y:ev.clientY,moved:false,dragging:false,opened:false,
+     originalDown:ev,timer:null};
    stylusHold=state;
    state.timer=setTimeout(()=>{
      if(stylusHold!==state||state.moved||!doc||rendering||pageBusy||
@@ -140,14 +141,36 @@
  canvas.addEventListener('pointermove',ev=>{
    const state=stylusHold;
    if(!state||state.id!==ev.pointerId)return;
+   if(state.opened){
+     // A long hold opens the context menu; do not move the object afterward.
+     ev.preventDefault();ev.stopImmediatePropagation();return;
+   }
+   if(state.dragging)return; // let the original PDF editor process movement
    if(Math.hypot(ev.clientX-state.x,ev.clientY-state.y)>PEN_HOLD_DRIFT){
-     state.moved=true;clearTimeout(state.timer);
+     state.moved=true;state.dragging=true;clearTimeout(state.timer);
+     if(pageEntries[page-1]?.id===state.pageId){
+       const hit=list().indexOf(state.object);
+       if(hit>=0){
+         // Replay the initial down position into the original pen editor.
+         // Its existing move/up handlers then perform ordinary move/resize,
+         // preserving snapshots, undo, handles and page coordinate transforms.
+         if(tool!=='select')desktopSetTool('select',false);
+         selectIndices([hit]);syncEditor();draw();
+         canvas.onpointerdown?.(state.originalDown);
+       }
+     }
+     return;
    }
    ev.preventDefault();ev.stopImmediatePropagation();
  },true);
  canvas.addEventListener('pointerup',ev=>{
    const state=stylusHold;
    if(!state||state.id!==ev.pointerId)return;
+   if(state.dragging){
+     finishStylusHold();
+     // Do not consume: original onpointerup commits drag and undo checkpoint.
+     return;
+   }
    // A quick stationary pen tap still selects the object normally.
    if(!state.opened&&!state.moved&&pageEntries[page-1]?.id===state.pageId){
      const hit=list().indexOf(state.object);
@@ -162,8 +185,9 @@
  },true);
  canvas.addEventListener('pointercancel',ev=>{
    if(stylusHold?.id!==ev.pointerId)return;
+   const drag=stylusHold.dragging;
    finishStylusHold();
-   ev.preventDefault();ev.stopImmediatePropagation();
+   if(!drag){ev.preventDefault();ev.stopImmediatePropagation();}
  },true);
  canvas.addEventListener('contextmenu',ev=>{
    if(stylusHold){ev.preventDefault();ev.stopImmediatePropagation();}
