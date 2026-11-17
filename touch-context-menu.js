@@ -176,7 +176,12 @@
      const hit=list().indexOf(state.object);
      if(hit>=0){
        if(tool!=='select')desktopSetTool('select',false);
-       selectIndices([hit]);syncEditor();draw();
+       selectIndices([hit]);
+       // The stylus capture handler bypasses mobile.js's wrapped setTool.
+       // Explicitly arm edit mode so the original Delete button becomes
+       // enabled on the FIRST tap, without requiring a drag.
+       if(typeof setTouchMode==='function')setTouchMode('edit',false);
+       syncEditor();draw();window.updateTouchSelection?.();
        canvas.dispatchEvent(new Event('annotation-pen-selected'));
      }
    }
