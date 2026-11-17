@@ -38,7 +38,9 @@ function buildCard(i,entry,zoom,size){
  const slot=document.createElement('div');slot.className='continuous-slot';
  slot.style.width=Math.ceil(size.width)+'px';slot.style.height=Math.ceil(size.height)+'px';
  const preview=document.createElement('canvas');preview.className='continuous-preview';
- preview.width=Math.ceil(size.width);preview.height=Math.ceil(size.height);
+ // Allocate pixel memory only when this page approaches the viewport.
+ preview.width=1;preview.height=1;
+ preview.style.width=Math.ceil(size.width)+'px';preview.style.height=Math.ceil(size.height)+'px';
  slot.append(preview);card.append(title,slot);stack.append(card);
  return {card,slot,preview,entry,zoom,index:i,loaded:false,loading:false};
 }
@@ -131,7 +133,12 @@ workspace.addEventListener('scroll',()=>{
   if(target)activate(target);
   for(const c of cards){
    const r=c.card.getBoundingClientRect(),v=workspace.getBoundingClientRect();
-   if(r.bottom>v.top-800&&r.top<v.bottom+800&&!c.loaded&&c.index!==page-1)renderPreview(c);
+   const nearby=r.bottom>v.top-800&&r.top<v.bottom+800;
+   if(nearby&&!c.loaded&&c.index!==page-1)renderPreview(c);
+   // Keep tablet memory bounded for long construction drawings.
+   if(!nearby&&c.loaded&&!c.loading&&c.index!==page-1){
+     c.loaded=false;c.preview.width=1;c.preview.height=1;
+   }
   }
  },135);
 },{passive:true});
