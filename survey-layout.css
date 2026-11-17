@@ -887,3 +887,22 @@ body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
 #surveyToolDock #tools #surveyPaletteDelete .ui-icon{
  color:#fff!important;stroke:#fff!important;
 }
+
+/* v1.4.54: avoid unreachable negative horizontal flex overflow on iPad.
+   Continuous stack width is also set explicitly from its widest PDF page. */
+body.continuous-mode #continuousPageStack{
+ box-sizing:border-box!important;
+ min-width:100%!important;
+ align-items:center!important;
+ margin-left:0!important;
+ margin-right:0!important;
+}
+body.continuous-mode #continuousPageStack .continuous-page{
+ box-sizing:border-box!important;
+ flex-shrink:0!important;
+ max-width:none!important;
+}
+body.continuous-mode main>.workspace{
+ overflow-x:auto!important;
+ overscroll-behavior-x:contain;
+}
