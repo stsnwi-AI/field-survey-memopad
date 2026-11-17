@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>現場調査メモパッド | 複数PDFワークスペース</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Yu Gothic",sans-serif;color:#173d53;background:#e8f0f4}
+*{box-sizing:border-box}body{margin:0}header{height:52px;background:#11384b;color:white;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 12px}
+header strong{font-size:15px}header small{font-size:11px;color:#cce3ef}header .actions{display:flex;gap:6px;align-items:center}
+button,.add{font:inherit;cursor:pointer;border-radius:7px;border:1px solid #abc4d2;background:white;color:#14394c;padding:8px 10px;min-height:38px;font-size:13px}
+button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
+.add{display:inline-flex;gap:4px;align-items:center;font-weight:700}#addFiles{position:absolute;opacity:0;width:1px;height:1px}
+#tabs{height:49px;display:flex;gap:5px;align-items:center;overflow-x:auto;background:#d4e5ef;border-bottom:1px solid #96b5c5;padding:5px 8px;scrollbar-width:thin}
+.tab{flex:none;max-width:260px;min-width:130px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;background:#eaf1f6;border-color:#a2bccc;min-height:38px}
+.tab[aria-selected=true]{background:white;border-bottom:3px solid #0f769e;font-weight:750}
+.tab small{display:block;color:#698393;font-size:10px;white-space:nowrap}
+#workspace{position:relative;height:calc(100dvh - 101px);overflow:hidden}
+.document-frame{border:0;width:100%;height:100%;position:absolute;inset:0;visibility:hidden;pointer-events:none;background:white}
+.document-frame.active{visibility:visible;pointer-events:auto;z-index:2}
+#empty{display:grid;place-content:center;height:100%;text-align:center;gap:15px;padding:20px;color:#456579}
+#empty h2{margin:0;font-size:21px}#empty p{margin:0;font-size:14px}
+#status{font-size:12px;position:fixed;bottom:6px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;background:#fffef2e8;border-radius:6px;z-index:8;pointer-events:none}
+@media(max-width:650px){header{height:50px;padding:4px 7px}header strong{font-size:12px}header small{display:none}.add{padding:7px 9px;font-size:12px}#tabs{height:45px}#workspace{height:calc(100dvh - 95px)}.tab{min-width:115px;max-width:180px}}
+</style></head><body>
+<header><div><strong>現場調査メモパッド｜PDFタブ</strong><small> Ver.1.4.46-dev ／図面ごとに編集状態を保持</small></div>
+<div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
+<nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
+<main id="workspace"><div id="empty"><h2>複数のPDFを開いて切り替え</h2><p>「＋ PDFを追加」で複数選択できます。書き込みを残したままタブを切り替えられます。</p><p>編集内容を残してアプリを終了するには、各PDFの「編集済みPDFを保存」を押してください。</p></div></main>
+<div id="status" role="status" aria-live="polite">PDFのタブはこの画面を開いている間保持されます。再読み込みすると開き直しが必要です。</div>
+<script>
+(()=>{'use strict';
+ const input=document.getElementById('addFiles'),tabs=document.getElementById('tabs'),workspace=document.getElementById('workspace'),empty=document.getElementById('empty'),status=document.getElementById('status');
+ const documents=[];let activeId=null,serial=0;
+ function setStatus(message){status.textContent=message}
+ function activate(id){
+   const doc=documents.find(d=>d.id===id);
+   if(!doc)return;
+   activeId=id;
+   for(const d of documents){d.frame.classList.toggle('active',d.id===id);d.tab.setAttribute('aria-selected',String(d.id===id));d.frame.setAttribute('aria-hidden',String(d.id!==id))}
+   doc.tab.scrollIntoView({block:'nearest',inline:'nearest'});
+   setStatus(doc.name+' を表示中。別タブへ切り替えても編集内容は保持されます。');
+ }
+ async function appendPDF(file){
+   if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')){setStatus('PDFファイルを選択してください');return}
+   const id='pdf-tab-'+(++serial),tab=document.createElement('button'),frame=document.createElement('iframe');
+   tab.className='tab';tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-selected','false');tab.textContent=file.name;tab.title=file.name;
+   frame.className='document-frame';frame.title=file.name;frame.setAttribute('aria-hidden','true');
+   const doc={id,name:file.name,tab,frame};
+   tab.addEventListener('click',()=>activate(id));
+   documents.push(doc);tabs.append(tab);workspace.append(frame);empty.hidden=true;
+   activate(id);setStatus(file.name+' を読み込み中…');
+   try{
+     const buffer=await file.arrayBuffer();
+     await new Promise((resolve,reject)=>{
+       const timer=setTimeout(()=>reject(new Error('読み込みタイムアウト')),30000);
+       frame.addEventListener('load',()=>{clearTimeout(timer);resolve()},{once:true});
+       frame.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('編集画面が開けません'))},{once:true});
+       frame.src='index.html?workspacePane=1&tab='+encodeURIComponent(id);
+     });
+     if(typeof frame.contentWindow.load!=='function')throw new Error('PDF編集機能が読み込めません');
+     // Each frame owns independent source PDFs, undo history, survey photos and notes.
+     // Transfer a fresh copy; never replace the state of another open document.
+     await frame.contentWindow.load(buffer,file.name);
+     activate(id);
+   }catch(err){
+     setStatus(file.name+' を開けませんでした：'+err.message);
+     tab.title=file.name+'（読み込み失敗）';
+   }
+ }
+ input.addEventListener('change',async e=>{
+   const files=Array.from(e.target.files||[]);input.value='';
+   for(const file of files)await appendPDF(file);
+ });
+ window.addEventListener('beforeunload',e=>{
+   if(documents.some(d=>{try{return d.frame.contentWindow?.dirty===true}catch{return false}})){e.preventDefault();e.returnValue=''}
+ });
+})();
+</script></body></html>
