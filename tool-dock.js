@@ -38,6 +38,13 @@
   editTrigger.setAttribute('aria-controls','dockEditSettings');
   editTrigger.setAttribute('aria-expanded','false');
   dock.append(editTrigger);
+  // Keep the ORIGINAL delete button and its handlers; expose it in the dock
+  // independently of the now-hidden legacy editor panel.
+  const deleteControl=document.getElementById('delete');
+  if(deleteControl){
+    deleteControl.classList.add('dock-delete-action');
+    dock.append(deleteControl);
+  }
   document.body.append(editPanel);
   editSummary.textContent='色・文字・線の設定（押すと閉じる）';
   let editWasDragged=false;
