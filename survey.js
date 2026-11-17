@@ -51,7 +51,7 @@ function clearPenPinHold(){
  penPinHold=null;
 }
 canvas.addEventListener('pointerdown',e=>{
- if(e.pointerType!=='pen'||e.button!==0||!e.isPrimary||!doc||rendering||pageBusy)return;
+ if(e.pointerType!=='pen'||e.button!==0||!e.isPrimary||!doc||rendering||pageBusy||tool==='pen'||tool==='highlight')return;
  const p=point(e);
  const hit=[...list().keys()].reverse().find(i=>list()[i]?.surveyId&&hitAnnotation(list()[i],p));
  if(hit===undefined)return;
