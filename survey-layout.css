@@ -801,3 +801,24 @@ body.continuous-mode #continuousPageStatus{
  background:#173e52e8;color:white;font-size:11px;pointer-events:none
 }
 @media(max-width:750px){#multiPDFWorkspace{font-size:10px;min-height:37px;padding:4px 6px}}
+
+/* v1.4.48: conspicuous destructive action in the top or floating tools.
+   Visuals only; do not change existing delete authorization/confirm logic. */
+#surveyToolDock #delete:not([hidden]),
+#surveyToolDock.dock-horizontal #delete:not([hidden]),
+body .mobile-tools-open #delete:not([hidden]){
+ background:#bf2734!important;
+ color:#fff!important;
+ border:2px solid #891624!important;
+ font-weight:800!important;
+ box-shadow:0 2px 6px #6814233d!important;
+ opacity:1!important;
+}
+#surveyToolDock #delete:disabled,
+#surveyToolDock.dock-horizontal #delete:disabled,
+body .mobile-tools-open #delete:disabled{
+ background:#f3dce0!important;color:#913a46!important;
+ border:2px solid #cda1a7!important;opacity:1!important;
+}
+#surveyToolDock #delete .ui-icon,
+body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
