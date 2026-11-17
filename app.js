@@ -186,7 +186,7 @@ async function restoreProject(project){if(project?.format!=='kantan-pdf-project'
 // this browser origin. No PDF is sent to a server and the source stays open.
 window.exportWorkspaceProject=function(){
  if(!doc||pageBusy||rendering||window.__surveyPdfLoading)throw Error('PDFの処理が完了してから開いてください');
- if(window.surveyPDFExport&&window.surveyPDFExport()===null)throw Error('調査写真・コメントの読込が完了していません');
+ if(window.surveyWorkspaceReady&&!window.surveyWorkspaceReady())throw Error('調査写真・コメントの読込が完了していません');
  return {project:makeProject(),history:[...history],redoStack:[...redoStack],dirty:dirty};
 };
 window.restoreWorkspaceProject=async function(project,pastHistory,pastRedo,wasDirty){
