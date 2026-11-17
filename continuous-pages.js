@@ -79,6 +79,10 @@ async function build(){
  // Prefer the actual active-page scale, including touch pinch zoom and
  // fit-to-width. Never derive independent scales for different pages.
  viewportScale=Number(scale)||Number(document.getElementById('zoom').value)||1;
+ // Freeze the fitted/current zoom as one document-wide value. Otherwise
+ // mobileFitMode recalculates a different scale for each active page.
+ if(typeof window.setPDFZoom==='function')window.setPDFZoom(viewportScale);
+ window.mobileFitMode=false;
  for(let i=0;i<pageEntries.length;i++){
   const entry=pageEntries[i],p=await sources[entry.source].doc.getPage(entry.index);
   if(token!==buildSerial)return;
