@@ -134,7 +134,7 @@ function endTouch(e,cancelled){if(e.pointerType!=='touch')return (cancelled?orig
 // A deliberate vertical swipe beyond the page edge turns the page;
  // ordinary in-page vertical or horizontal movement remains panning.
  let turnPage=0;
- if(!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){
+ if(!document.body.classList.contains('continuous-mode')&&!cancelled&&!touchConsumed&&touchPointers.size===1&&gesture?.pan&&doc&&!rendering&&!pageBusy){
    turnPage=edgeTurnDirection(gesture,e.clientX-gesture.x,e.clientY-gesture.y);
    if(turnPage>0&&page>=doc.numPages)turnPage=0;
    if(turnPage<0&&page<=1)turnPage=0;
@@ -165,7 +165,7 @@ function endBackgroundSwipe(e){
  if(!backgroundSwipe||e.pointerId!==backgroundSwipe.id)return;
  const g=backgroundSwipe;backgroundSwipe=null;
  if(e.type==='pointercancel'||!doc||pageBusy||rendering)return;
- const direction=edgeTurnDirection(g,e.clientX-g.x,e.clientY-g.y);
+ const direction=document.body.classList.contains('continuous-mode')?0:edgeTurnDirection(g,e.clientX-g.x,e.clientY-g.y);
  const action=direction>0&&page<doc.numPages?'next':
    direction<0&&page>1?'prev':null;
  if(action)queueMicrotask(()=>{const button=document.getElementById(action);if(button&&!button.disabled)button.click()});
