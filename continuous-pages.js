@@ -76,6 +76,11 @@ async function build(){
  const oldRect=oldActive?.card.getBoundingClientRect();
  const scrollOffset=oldRect?oldRect.top-workspace.getBoundingClientRect().top:0;
  stack.replaceChildren();cards=[];
+ // A centered flex child wider than the viewport can overflow to the LEFT,
+ // which is unreachable by positive scrollLeft in iPad Safari.
+ // Reserve the complete scrollable width from x=0 before centering pages.
+ // This also leaves a small visible margin at both PDF edges.
+ stack.style.width='';
  // Prefer the actual active-page scale, including touch pinch zoom and
  // fit-to-width. Never derive independent scales for different pages.
  viewportScale=Number(scale)||Number(document.getElementById('zoom').value)||1;
@@ -89,6 +94,13 @@ async function build(){
   const zoom=zoomFor(p,entry),v=viewportFor(p,entry,zoom);
   cards.push(buildCard(i,entry,zoom,v));
  }
+ // Explicitly size the scrolling content to the WIDEST page or viewport.
+ // Center pages only inside this non-negative coordinate space, not around
+ // the viewport's center (which could produce inaccessible negative overflow).
+ const widest=Math.max(0,...cards.map(c=>Math.ceil(c.slot.getBoundingClientRect().width)));
+ const stackWidth=Math.max(workspace.clientWidth,widest+32);
+ stack.style.width=stackWidth+'px';
+ stack.style.minWidth='100%';
  const c=cards[page-1];
  if(c){c.slot.append(paper);paper.style.display='block';c.card.classList.add('current')}
  // Eagerly render only the first few pages, then render others as they approach.
