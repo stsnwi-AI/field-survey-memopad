@@ -235,8 +235,11 @@ function placeFromEvent(e){
  if(list().length<=countBefore)return true;
  previousPinPlacedAt=Date.now();previousPinPoint={x:p.x,y:p.y};
  lastTouchPlacement=previousPinPlacedAt;
- if(!by('surveyContinuous').checked)setPlace(false);
- else{canvas.style.cursor='crosshair';status('番号を配置しました。続けて配置できます。');}
+ // A pin is always a single deliberate placement. The next pin requires
+ // the user to press the placement button again (even if continuous was ON).
+ setPlace(false);
+ if(by('surveyContinuous'))by('surveyContinuous').checked=false;
+ status('調査番号を1件配置しました。続ける場合は配置ボタンをもう一度押してください。');
  return true;
 }
 // Register capture listeners before the original PDF editor's context menu handler.
