@@ -23,10 +23,9 @@ function viewportFor(p,e,zoom){
  return p.getViewport({scale:zoom,rotation:p.rotate+(e.rotation||0)});
 }
 function zoomFor(p,e){
- const raw=viewportFor(p,e,1);
- if(window.mobileFitMode&&window.matchMedia('(max-width:1024px), (pointer:coarse)').matches)
-   return Math.max(.15,Math.min(2,(workspace.clientWidth-28)/raw.width));
- return Math.max(.15,Math.min(2,Number(document.getElementById('zoom').value)||1));
+ // All preview pages must use the SAME scale as the active editor.
+ // Per-page fit-to-width caused different sizes/overlapping page cards.
+ return viewportScale;
 }
 function cardPreview(card){
  return card.querySelector('.continuous-preview');
@@ -72,8 +71,14 @@ async function build(){
  // Complete any pending page render before moving its original canvas.
  for(let retry=0;rendering&&retry<80;retry++)await wait(30);
  if(token!==buildSerial||rendering)return;
+ // Preserve the currently viewed page and relative scroll position.
+ const oldActive=cards[page-1];
+ const oldRect=oldActive?.card.getBoundingClientRect();
+ const scrollOffset=oldRect?oldRect.top-workspace.getBoundingClientRect().top:0;
  stack.replaceChildren();cards=[];
- viewportScale=Number(document.getElementById('zoom').value)||1;
+ // Prefer the actual active-page scale, including touch pinch zoom and
+ // fit-to-width. Never derive independent scales for different pages.
+ viewportScale=Number(scale)||Number(document.getElementById('zoom').value)||1;
  for(let i=0;i<pageEntries.length;i++){
   const entry=pageEntries[i],p=await sources[entry.source].doc.getPage(entry.index);
   if(token!==buildSerial)return;
@@ -86,7 +91,11 @@ async function build(){
  for(const n of [page-2,page,page+1]){
   if(n>=0&&n<cards.length)renderPreview(cards[n]);
  }
- stack.scrollIntoView({block:'nearest'});
+ // Keep the same reading position after changing zoom; no overlapping.
+ if(c&&oldRect){
+   const newTop=c.card.getBoundingClientRect().top-workspace.getBoundingClientRect().top;
+   workspace.scrollTop+=newTop-scrollOffset;
+ }
  document.getElementById('continuousPageStatus').textContent=page+' / '+pageEntries.length+' ページ｜上下にスクロール';
 }
 function activeCardAtCenter(){
@@ -151,8 +160,25 @@ for(const [btn,delta] of [[prev,-1],[next,1]]){
  btn?.addEventListener('click',e=>{if(!cards.length)return;e.preventDefault();e.stopImmediatePropagation();goToPage(delta)},true);
 }
 const zoom=document.getElementById('zoom');
-zoom?.addEventListener('change',()=>{setTimeout(build,120)});
-window.surveyPDFLoaded=async p=>{
+// A user zoom (including pen/finger pinch) calls the existing render().
+ // Rebuild all page card dimensions together after that render settles.
+ let zoomRefreshTimer=null;
+ const originalContinuousRender=render;
+ render=async function(){
+   const result=await originalContinuousRender();
+   if(!changeInProgress&&doc&&cards.length){
+     const actual=Number(scale)||1;
+     if(Math.abs(actual-viewportScale)>.001){
+       clearTimeout(zoomRefreshTimer);
+       zoomRefreshTimer=setTimeout(()=>{
+         if(!changeInProgress&&!rendering&&!pageBusy)void build();
+       },100);
+     }
+   }
+   return result;
+ };
+ zoom?.addEventListener('change',()=>{clearTimeout(zoomRefreshTimer);zoomRefreshTimer=setTimeout(()=>{if(!rendering)void build()},180)});
+ window.surveyPDFLoaded=async p=>{
  await oldSurveyLoaded?.(p);
  await build();
 };
