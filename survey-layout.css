@@ -773,3 +773,31 @@ body>#dockEditSettings #editLineRow .line-help{font-size:10px!important}
 body>#dockEditSettings{
  max-width:min(370px,calc(100vw - 16px))!important;
 }
+
+/* Ver.1.4.46 experimental multi-PDF / vertical continuous pages. */
+#multiPDFWorkspace{
+ display:inline-flex;align-items:center;text-decoration:none;min-height:40px;
+ border-radius:7px;border:1px solid #9ebfd1;background:#e2f1f8;color:#153e54;
+ padding:7px 10px;font-size:12px;font-weight:750;white-space:nowrap;
+}
+body.continuous-mode #multiPDFWorkspace,body.continuous-mode #openAnotherPDF{display:none!important}
+body.continuous-mode main>.workspace{scroll-behavior:auto!important}
+body.continuous-mode #continuousPageStack{display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 8px 60px;min-height:100px}
+body.continuous-mode .continuous-page{display:flex;flex-direction:column;align-items:center;flex:none;max-width:none;padding:0;position:relative}
+body.continuous-mode .continuous-page-label{
+ align-self:flex-start;position:sticky;left:0;font-size:11px;font-weight:750;
+ padding:4px 9px;margin-bottom:5px;background:#f8fcfee6;border:1px solid #c4d9e5;border-radius:7px;color:#31566b
+}
+body.continuous-mode .continuous-slot{display:block;flex:none;position:relative;background:#fff;box-shadow:0 2px 12px #102c3f30}
+body.continuous-mode .continuous-preview{display:block;position:absolute;left:0;top:0;pointer-events:none}
+body.continuous-mode .continuous-page.current .continuous-preview{display:none}
+body.continuous-mode #continuousPageStack #paper{
+ position:relative!important;display:block!important;margin:0!important;width:max-content;
+ max-width:none!important;box-shadow:none!important
+}
+body.continuous-mode #continuousPageStatus{
+ position:sticky;bottom:0;z-index:8;display:block;width:max-content;max-width:95%;
+ margin:0 auto;padding:5px 10px;border-radius:7px 7px 0 0;
+ background:#173e52e8;color:white;font-size:11px;pointer-events:none
+}
+@media(max-width:750px){#multiPDFWorkspace{font-size:10px;min-height:37px;padding:4px 6px}}
