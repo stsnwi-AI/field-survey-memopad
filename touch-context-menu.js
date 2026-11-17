@@ -118,7 +118,7 @@
  }
  canvas.addEventListener('pointerdown',ev=>{
    if(ev.pointerType!=='pen'||ev.button!==0||!ev.isPrimary||
-      !doc||rendering||pageBusy)return;
+      !doc||rendering||pageBusy||tool==='pen'||tool==='highlight')return;
    if(by('surveyPinMode')?.getAttribute('aria-pressed')==='true')return;
    const idx=topAnnotationAt(point(ev));
    if(idx<0||list()[idx]?.surveyId)return; // survey pins belong to photo/memo
@@ -196,7 +196,7 @@
    if(!menu.hidden)hideMenu();
    press=null;
    if(!doc||rendering||pageBusy||ev.button!==0||
-      !['touch','pen'].includes(ev.pointerType))return;
+      !['touch','pen'].includes(ev.pointerType)||tool==='pen'||tool==='highlight')return;
    if(by('surveyPinMode')?.getAttribute('aria-pressed')==='true')return;
    const idx=topAnnotationAt(point(ev));
    if(idx<0||list()[idx]?.surveyId){lastTap=null;return}
