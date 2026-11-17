@@ -822,3 +822,16 @@ body .mobile-tools-open #delete:disabled{
 }
 #surveyToolDock #delete .ui-icon,
 body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
+
+/* v1.4.48 follow-up: original delete button is now a visible dock action. */
+#surveyToolDock #delete.dock-delete-action,
+#surveyToolDock.dock-horizontal #delete.dock-delete-action{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;width:auto!important;min-width:90px!important;min-height:42px!important;
+ margin:2px!important;padding:7px 12px!important;
+ background:#b4232f!important;color:white!important;border:2px solid #87141e!important;
+ font-weight:850!important;opacity:1!important;
+}
+#surveyToolDock #delete.dock-delete-action:disabled{
+ background:#f3dce0!important;color:#913a46!important;border-color:#cda1a7!important
+}
