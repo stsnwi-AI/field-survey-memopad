@@ -9,8 +9,12 @@ button,.add{font:inherit;cursor:pointer;border-radius:7px;border:1px solid #abc4
 button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 .add{display:inline-flex;gap:4px;align-items:center;font-weight:700}#addFiles{position:absolute;opacity:0;width:1px;height:1px}
 #tabs{height:49px;display:flex;gap:5px;align-items:center;overflow-x:auto;background:#d4e5ef;border-bottom:1px solid #96b5c5;padding:5px 8px;scrollbar-width:thin}
-.tab{flex:none;max-width:260px;min-width:130px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;background:#eaf1f6;border-color:#a2bccc;min-height:38px}
-.tab[aria-selected=true]{background:white;border-bottom:3px solid #0f769e;font-weight:750}
+.tab-wrap{display:flex;flex:none;align-items:center;gap:0;max-width:285px;min-width:135px;background:#eaf1f6;border:1px solid #a2bccc;border-radius:7px;overflow:hidden}
+.tab-wrap:has(.tab[aria-selected=true]){background:white;border-bottom:3px solid #0f769e}
+.tab-close{border:0!important;border-radius:0!important;background:transparent!important;min-width:34px;min-height:38px;padding:5px;font-size:19px;flex:none}
+.tab-close:hover,.tab-close:focus-visible{background:#ffe7e7!important;color:#a32d2d}
+.tab{flex:1;min-width:0;max-width:240px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;background:transparent;border:0;min-height:38px}
+.tab[aria-selected=true]{background:white;font-weight:750}
 .tab small{display:block;color:#698393;font-size:10px;white-space:nowrap}
 #workspace{position:relative;height:calc(100dvh - 101px);overflow:hidden}
 .document-frame{border:0;width:100%;height:100%;position:absolute;inset:0;visibility:hidden;pointer-events:none;background:white}
@@ -18,9 +22,9 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 #empty[hidden]{display:none}#empty{display:grid;place-content:center;height:100%;text-align:center;gap:15px;padding:20px;color:#456579}
 #empty h2{margin:0;font-size:21px}#empty p{margin:0;font-size:14px}
 #status{font-size:12px;position:fixed;bottom:6px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;background:#fffef2e8;border-radius:6px;z-index:8;pointer-events:none}
-@media(max-width:650px){header{height:50px;padding:4px 7px}header strong{font-size:12px}header small{display:none}.add{padding:7px 9px;font-size:12px}#tabs{height:45px}#workspace{height:calc(100dvh - 95px)}.tab{min-width:115px;max-width:180px}}
+@media(max-width:650px){header{height:50px;padding:4px 7px}header strong{font-size:12px}header small{display:none}.add{padding:7px 9px;font-size:12px}#tabs{height:45px}#workspace{height:calc(100dvh - 95px)}.tab-wrap{min-width:120px;max-width:205px}.tab{max-width:155px}}
 </style></head><body>
-<header><div><strong>現場調査メモパッド｜PDFタブ</strong><small> Ver.1.4.46-dev ／図面ごとに編集状態を保持</small></div>
+<header><div><strong>現場調査メモパッド｜PDFタブ</strong><small> Ver.1.4.47-dev ／図面ごとに編集状態を保持</small></div>
 <div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
 <nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
 <main id="workspace"><div id="empty"><h2>複数のPDFを開いて切り替え</h2><p>「＋ PDFを追加」で複数選択できます。書き込みを残したままタブを切り替えられます。</p><p>編集内容を残してアプリを終了するには、各PDFの「編集済みPDFを保存」を押してください。</p></div></main>
@@ -29,6 +33,10 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 (()=>{'use strict';
  const input=document.getElementById('addFiles'),tabs=document.getElementById('tabs'),workspace=document.getElementById('workspace'),empty=document.getElementById('empty'),status=document.getElementById('status');
  const documents=[];let activeId=null,serial=0;
+ const handoffToken=new URLSearchParams(location.search).get('transfer');
+ let handoffChannel=null,requestTimer=null;
+ function isHandoffToken(v){return typeof v==='string'&&/^[0-9a-f-]{32,40}$/i.test(v)}
+
  function setStatus(message){status.textContent=message}
  function activate(id){
    const doc=documents.find(d=>d.id===id);
@@ -38,14 +46,39 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
    doc.tab.scrollIntoView({block:'nearest',inline:'nearest'});
    setStatus(doc.name+' を表示中。別タブへ切り替えても編集内容は保持されます。');
  }
+ function closePDF(id){
+   const index=documents.findIndex(d=>d.id===id);
+   if(index<0)return;
+   const d=documents[index];
+   let unsaved=true;
+   try{unsaved=d.frame.contentWindow?.dirty!==false}catch{}
+   const question=unsaved
+    ?'「'+d.name+'」のタブを閉じますか？保存していない書き込み・写真・コメントは失われる可能性があります。先に「編集済みPDFを保存」を押してください。'
+    :'「'+d.name+'」を閉じますか？元のPDFファイルは削除されません。';
+   if(!confirm(question))return;
+   documents.splice(index,1);
+   d.frame.remove();d.wrapper.remove();
+   if(id===activeId){
+     activeId=null;
+     const next=documents[Math.min(index,documents.length-1)];
+     if(next)activate(next.id);
+   }
+   if(!documents.length){empty.hidden=false;setStatus('すべてのPDFタブを閉じました。必要なファイルを追加してください。')}
+ }
  async function appendPDF(file){
    if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')){setStatus('PDFファイルを選択してください');return}
    const id='pdf-tab-'+(++serial),tab=document.createElement('button'),frame=document.createElement('iframe');
+   const wrapper=document.createElement('div'),close=document.createElement('button');
+   wrapper.className='tab-wrap';
    tab.className='tab';tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-selected','false');tab.textContent=file.name;tab.title=file.name;
+   close.className='tab-close';close.type='button';close.textContent='×';close.title='このPDFを閉じる';
+   close.setAttribute('aria-label',file.name+'を閉じる');
    frame.className='document-frame';frame.title=file.name;frame.setAttribute('aria-hidden','true');
-   const doc={id,name:file.name,tab,frame};
+   const doc={id,name:file.name,tab,frame,wrapper};
    tab.addEventListener('click',()=>activate(id));
-   documents.push(doc);tabs.append(tab);workspace.append(frame);empty.hidden=true;
+   close.addEventListener('click',()=>closePDF(id));
+   wrapper.append(tab,close);
+   documents.push(doc);tabs.append(wrapper);workspace.append(frame);empty.hidden=true;
    activate(id);setStatus(file.name+' を読み込み中…');
    try{
      const buffer=await file.arrayBuffer();
@@ -64,6 +97,55 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
      setStatus(file.name+' を開けませんでした：'+err.message);
      tab.title=file.name+'（読み込み失敗）';
    }
+ }
+ // Import the currently edited PDF from the previous editor without
+ // closing that editor. The project contains original PDFs + annotations +
+ // survey photo/comment data; no server or cross-origin transfer is used.
+ async function appendTransferredProject(payload){
+   const project=payload?.project;
+   if(!project||project.format!=='kantan-pdf-project'||!Array.isArray(project.pageEntries))throw Error('編集情報の形式が異なります');
+   const id='pdf-tab-'+(++serial),tab=document.createElement('button'),frame=document.createElement('iframe');
+   const wrapper=document.createElement('div'),close=document.createElement('button');
+   const name=project.originalPdfName||'編集中.pdf';
+   wrapper.className='tab-wrap';tab.className='tab';tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-selected','false');tab.textContent=name;tab.title=name;
+   close.className='tab-close';close.type='button';close.textContent='×';close.title='このPDFを閉じる';close.setAttribute('aria-label',name+'を閉じる');
+   frame.className='document-frame';frame.title=name;frame.setAttribute('aria-hidden','true');
+   const doc={id,name,tab,frame,wrapper};
+   tab.addEventListener('click',()=>activate(id));close.addEventListener('click',()=>closePDF(id));
+   wrapper.append(tab,close);documents.push(doc);tabs.append(wrapper);workspace.append(frame);empty.hidden=true;activate(id);
+   try{
+     await new Promise((resolve,reject)=>{
+       const timer=setTimeout(()=>reject(new Error('編集画面を読み込めません')),30000);
+       frame.addEventListener('load',()=>{clearTimeout(timer);resolve()},{once:true});
+       frame.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('編集画面を読み込めません'))},{once:true});
+       frame.src='index.html?workspacePane=1&tab='+encodeURIComponent(id);
+     });
+     const editor=frame.contentWindow;
+     if(typeof editor.restoreWorkspaceProject!=='function')throw Error('編集データ受け渡し機能がありません');
+     await editor.restoreWorkspaceProject(project,payload.history,payload.redoStack,payload.dirty);
+     activate(id);
+     setStatus('編集中のPDF「'+name+'」を引き継ぎました。元の編集画面も保持されています。');
+   }catch(err){
+     setStatus(name+'の引継ぎに失敗しました：'+err.message+'。元のPDF編集画面はそのままです。');
+     documents.splice(documents.indexOf(doc),1);frame.remove();wrapper.remove();
+     if(!documents.length){empty.hidden=false;activeId=null}
+   }
+ }
+ if(isHandoffToken(handoffToken)&&typeof BroadcastChannel!=='undefined'){
+   handoffChannel=new BroadcastChannel('field-survey-workspace-'+handoffToken);
+   let received=false,tries=0;
+   handoffChannel.onmessage=async e=>{
+     if(received||e.data?.type!=='handoff-project'||e.data?.token!==handoffToken)return;
+     received=true;clearInterval(requestTimer);
+     try{await appendTransferredProject(e.data.payload)}
+     catch(err){setStatus('編集中PDFの引継ぎに失敗しました：'+err.message)}
+     finally{handoffChannel.close()}
+   };
+   handoffChannel.postMessage({type:'handoff-ready',token:handoffToken});
+   requestTimer=setInterval(()=>{
+     if(received||++tries>60){clearInterval(requestTimer);if(!received){setStatus('前のPDFの受け渡しを確認できません。元の編集画面からもう一度開いてください。');handoffChannel.close()}return}
+     handoffChannel.postMessage({type:'handoff-ready',token:handoffToken});
+   },500);
  }
  input.addEventListener('change',async e=>{
    const files=Array.from(e.target.files||[]);input.value='';
