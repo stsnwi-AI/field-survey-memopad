@@ -104,7 +104,7 @@ canvas.addEventListener('pointerup',e=>{
  }
  if(!state.opened&&!state.moved&&getPage()===state.pageId){
   const index=list().findIndex(o=>o.surveyId===state.pinId);
-  if(index>=0){setTool('select',false);selectIndices([index]);syncEditor();draw();canvas.dispatchEvent(new Event('survey-pin-selected'));}
+  if(index>=0){setTool('select',false);selectIndices([index]);if(typeof setTouchMode==='function')setTouchMode('edit',false);syncEditor();draw();window.updateTouchSelection?.();canvas.dispatchEvent(new Event('survey-pin-selected'));}
  }
  clearPenPinHold();
  e.preventDefault();e.stopImmediatePropagation();
