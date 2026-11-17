@@ -402,6 +402,7 @@ function safeEmbeddedSurvey(data){
 }
 // Primary v1.4 flow: a PDF with embedded surveyData is authoritative. Existing IndexedDB
 // and legacy JSON backup remain available for old PDFs. No site ID is needed for new work.
+window.surveyWorkspaceReady=()=>!storageLoading&&!!activeStorageKey&&activeStorageKey===documentStorageKey();
 window.surveyPDFExport=()=>safeEmbeddedSurvey({format:'field-survey-records',schemaVersion:1,siteId:siteId||null,records:structuredClone(records)});
 window.surveyPreparePDFSave=async()=>{
  if(!doc)throw Error('PDFを開いてください');
