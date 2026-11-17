@@ -206,7 +206,9 @@ function nearbyExistingSurveyPin(p){
 
 function setPlace(v){
  placing=!!v;
- const btn=by('surveyPinMode');btn.setAttribute('aria-pressed',String(placing));
+ const btn=by('surveyPinMode');
+ btn.setAttribute('aria-pressed',String(placing));
+ btn.classList.toggle('pin-placement-active',placing);
  btn.textContent='調査番号を配置：'+(placing?'ON':'OFF');
  canvas.style.cursor=placing?'crosshair':(tool==='select'?'default':'crosshair');
  status(placing?'PCは空いている図面を右クリックして番号配置、既存番号を左ダブルクリックで記録編集。スマホは図面を1本指でタップしてください。'+(by('surveyContinuous').checked?'連続採番中です。':'1件配置すると終了します。'):'番号配置を終了しました。通常のPDF編集操作に戻りました。');
