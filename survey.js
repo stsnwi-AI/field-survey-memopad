@@ -57,7 +57,7 @@ canvas.addEventListener('pointerdown',e=>{
  if(hit===undefined)return;
  const pin=list()[hit],pageId=getPage();
  clearPenPinHold();
- const state={id:e.pointerId,x:e.clientX,y:e.clientY,pageId,pinId:pin.surveyId,hit,timer:null,opened:false,moved:false};
+ const state={id:e.pointerId,x:e.clientX,y:e.clientY,pageId,pinId:pin.surveyId,hit,timer:null,opened:false,moved:false,dragging:false,originalDown:e};
  penPinHold=state;
  state.timer=setTimeout(()=>{
   if(penPinHold!==state||state.moved||!doc||rendering||pageBusy||getPage()!==state.pageId)return;
@@ -77,14 +77,31 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{
  const state=penPinHold;
  if(!state||e.pointerId!==state.id)return;
+ if(state.opened){e.preventDefault();e.stopImmediatePropagation();return}
+ if(state.dragging)return; // let the unchanged editor move the selected pin
  if(Math.hypot(e.clientX-state.x,e.clientY-state.y)>PEN_PIN_MOVE_PX){
-  state.moved=true;clearTimeout(state.timer);
+  state.moved=true;state.dragging=true;clearTimeout(state.timer);
+  if(getPage()===state.pageId){
+   const index=list().findIndex(o=>o.surveyId===state.pinId);
+   if(index>=0){
+    // Match ordinary object drag, but keep pin photo/record identity.
+    setTool('select',false);
+    selectIndices([index]);syncEditor();draw();
+    canvas.onpointerdown?.(state.originalDown);
+   }
+  }
+  return; // current move goes to the editor to update coordinates
  }
  e.preventDefault();e.stopImmediatePropagation();
 },true);
 canvas.addEventListener('pointerup',e=>{
  const state=penPinHold;
  if(!state||e.pointerId!==state.id)return;
+ if(state.dragging){
+  clearPenPinHold();
+  // Keep the original editor pointerup: finish move and undo history.
+  return;
+ }
  if(!state.opened&&!state.moved&&getPage()===state.pageId){
   const index=list().findIndex(o=>o.surveyId===state.pinId);
   if(index>=0){setTool('select',false);selectIndices([index]);syncEditor();draw();canvas.dispatchEvent(new Event('survey-pin-selected'));}
@@ -94,8 +111,9 @@ canvas.addEventListener('pointerup',e=>{
 },true);
 canvas.addEventListener('pointercancel',e=>{
  if(penPinHold?.id!==e.pointerId)return;
+ const wasDragging=penPinHold.dragging;
  clearPenPinHold();
- e.preventDefault();e.stopImmediatePropagation();
+ if(!wasDragging){e.preventDefault();e.stopImmediatePropagation();}
 },true);
 canvas.addEventListener('contextmenu',e=>{
  if(penPinHold||Date.now()<penPinSuppressClickUntil){
@@ -210,6 +228,8 @@ function setPlace(v){
  btn.setAttribute('aria-pressed',String(placing));
  btn.classList.toggle('pin-placement-active',placing);
  btn.textContent='調査番号を配置：'+(placing?'ON':'OFF');
+ // Notify the actual top toolbar icon even for automatic OFF after placing.
+ btn.dispatchEvent(new CustomEvent('survey-placement-changed',{detail:{placing}}));
  canvas.style.cursor=placing?'crosshair':(tool==='select'?'default':'crosshair');
  status(placing?'PCは空いている図面を右クリックして番号配置、既存番号を左ダブルクリックで記録編集。スマホは図面を1本指でタップしてください。'+(by('surveyContinuous').checked?'連続採番中です。':'1件配置すると終了します。'):'番号配置を終了しました。通常のPDF編集操作に戻りました。');
 }
