@@ -128,7 +128,7 @@ canvas.addEventListener('click',e=>{
 // Double click directly on an existing survey stamp opens its photo/comment dialog.
 // Capture phase preempts the original text-editor double click handler for survey pins only.
 canvas.addEventListener('dblclick',e=>{
- if(!doc||rendering||pageBusy||e.button>0)return;
+ if(!doc||rendering||pageBusy||e.button>0||tool==='pen'||tool==='highlight')return;
  const p=point(e);
  const i=[...list().keys()].reverse().find(i=>list()[i]?.surveyId && hitAnnotation(list()[i],p));
  if(i===undefined)return;
@@ -139,7 +139,7 @@ canvas.addEventListener('dblclick',e=>{
 // Two deliberate taps on a pin also open the dialog on touch devices.
 let recentTap=null;
 canvas.addEventListener('pointerup',e=>{
- if(e.pointerType!=='touch'||window.fieldStylusMode||placing||!doc||rendering||pageBusy||!e.isPrimary)return;
+ if(e.pointerType!=='touch'||window.fieldStylusMode||placing||!doc||rendering||pageBusy||!e.isPrimary||tool==='pen'||tool==='highlight')return;
  const p=point(e),idx=[...list().keys()].reverse().find(i=>list()[i]?.surveyId&&hitAnnotation(list()[i],p));
  if(idx===undefined){recentTap=null;return}
  const pin=list()[idx],now=Date.now();
