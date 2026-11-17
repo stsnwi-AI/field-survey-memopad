@@ -862,3 +862,14 @@ body .mobile-tools-open #delete .ui-icon{stroke:currentColor!important}
  filter:saturate(.8)!important;
  cursor:not-allowed!important;
 }
+
+/* v1.4.50: sync the actual visible survey button with auto-OFF state. */
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="true"]{
+ background:#ed861d!important;color:#fff!important;
+ border:2px solid #a65a0c!important;
+}
+#surveyToolDock #tools #surveyPalettePin[aria-pressed="false"]{
+ background:#e5ebef!important;color:#23485c!important;
+ border:2px solid #a4b6c2!important;
+ box-shadow:none!important;outline:none!important;
+}
