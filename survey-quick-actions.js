@@ -37,6 +37,8 @@
     }
   }, true);
   originalPin.addEventListener('click', () => queueMicrotask(syncPin));
+  // Automatic OFF after placing one pin does not click the original button.
+  originalPin.addEventListener('survey-pin-placement-changed', syncPin);
 
   remove.addEventListener('click', () => {
     if ((typeof doc === 'undefined' || !doc) || typeof selectionIndices !== 'function' || !selectionIndices().length) {
