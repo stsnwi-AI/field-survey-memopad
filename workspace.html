@@ -52,9 +52,9 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
    const d=documents[index];
    let unsaved=true;
    try{unsaved=d.frame.contentWindow?.dirty!==false}catch{}
-   const question=unsaved
-    ?'「'+d.name+'」のタブを閉じますか？保存していない書き込み・写真・コメントは失われる可能性があります。先に「編集済みPDFを保存」を押してください。'
-    :'「'+d.name+'」を閉じますか？元のPDFファイルは削除されません。';
+   const question='「'+d.name+'」を閉じますか？'+
+    (unsaved?'このタブには未保存の編集がある可能性があります。':'このPDFの保存状態を確認してください。')+
+    '保存していない書き込み・写真・コメントは失われます。必要ならキャンセルして「編集済みPDFを保存」を押してください。元のPDFは削除されません。';
    if(!confirm(question))return;
    documents.splice(index,1);
    d.frame.remove();d.wrapper.remove();
@@ -135,7 +135,13 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
    handoffChannel=new BroadcastChannel('field-survey-workspace-'+handoffToken);
    let received=false,tries=0;
    handoffChannel.onmessage=async e=>{
-     if(received||e.data?.type!=='handoff-project'||e.data?.token!==handoffToken)return;
+     if(received||e.data?.token!==handoffToken)return;
+     if(e.data.type==='handoff-error'){
+       received=true;clearInterval(requestTimer);
+       setStatus('編集中PDFを移せませんでした：'+e.data.message+'。元の編集画面はそのまま保持されています。');
+       handoffChannel.close();return;
+     }
+     if(e.data.type!=='handoff-project')return;
      received=true;clearInterval(requestTimer);
      try{await appendTransferredProject(e.data.payload)}
      catch(err){setStatus('編集中PDFの引継ぎに失敗しました：'+err.message)}
