@@ -25,6 +25,41 @@
   zoomHome.append(zoom);
   bar.append(zoomHome);
   strip.append(pageControls,move);
+  // Always-visible desktop mouse zoom; share the existing zoom/select render path.
+  const desktopZoom=document.createElement('div');
+  desktopZoom.id='desktopZoomControls';
+  desktopZoom.setAttribute('aria-label','図面の拡大・縮小');
+  const minus=document.createElement('button');
+  minus.type='button';minus.id='desktopZoomOut';minus.textContent='－';minus.title='25%縮小';
+  const percentage=document.createElement('output');
+  percentage.id='desktopZoomValue';percentage.setAttribute('aria-live','polite');
+  const plus=document.createElement('button');
+  plus.type='button';plus.id='desktopZoomIn';plus.textContent='＋';plus.title='25%拡大';
+  function syncZoom(){
+    const value=Number(zoom.value)||1;
+    percentage.textContent=Math.round(value*100)+'%';
+    minus.disabled=value<=.25;plus.disabled=value>=3;
+  }
+  function changeZoom(delta){
+    if(!doc||rendering||pageBusy)return;
+    const current=Number(zoom.value)||1;
+    const next=Math.min(3,Math.max(.25,Math.round((current+delta)*100)/100));
+    if(next===current)return;
+    if(typeof window.setPDFZoom==='function')window.setPDFZoom(next);
+    else {
+      let opt=[...zoom.options].find(o=>Number(o.value)===next);
+      if(!opt){opt=document.createElement('option');opt.value=String(next);opt.textContent=Math.round(next*100)+'%';zoom.append(opt)}
+      zoom.value=String(next);
+    }
+    zoom.dispatchEvent(new Event('change',{bubbles:true}));
+    syncZoom();
+  }
+  minus.onclick=()=>changeZoom(-.25);
+  plus.onclick=()=>changeZoom(.25);
+  desktopZoom.append(minus,percentage,plus);
+  strip.append(desktopZoom);
+  zoom.addEventListener('change',syncZoom);
+  syncZoom();
   header.querySelector('.brand')?.after(strip);
 
   function syncMove(){
