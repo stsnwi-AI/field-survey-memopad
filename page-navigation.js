@@ -62,25 +62,86 @@
   syncZoom();
   header.querySelector('.brand')?.after(strip);
 
+  // Desktop mouse panning is opt-in and must never change PDF annotations.
+  // Touch panning remains owned by mobile.js.
+  const mouseFine=window.matchMedia('(pointer:fine)');
+  let desktopPan=false,drag=null,suppressClick=false;
+  function desktopAvailable(){return mouseFine.matches}
+  function setDesktopPan(active){
+    desktopPan=!!active;
+    drag=null;
+    workspace.classList.toggle('desktop-pan-active',desktopPan);
+    syncMove();
+  }
   function syncMove(){
-    const browse=typeof touchMode!=='undefined'&&touchMode==='browse';
+    const browse=desktopAvailable()?desktopPan:(typeof touchMode!=='undefined'&&touchMode==='browse');
     move.setAttribute('aria-pressed',String(browse));
     move.classList.toggle('active',browse);
-    move.title=browse?'図面移動中：指1本で上下左右へ移動。上下端スワイプでページ送り':'図面移動に切り替える';
+    move.title=desktopAvailable()
+      ?(browse?'図面移動ON：PDFをマウス左ボタンでドラッグ。もう一度押すと解除':'図面移動OFF：クリックでマウスドラッグを有効化')
+      :(browse?'図面移動中：指1本で上下左右へ移動。上下端スワイプでページ送り':'図面移動に切り替える');
   }
   move.addEventListener('click',()=>{
     const originalPin=document.getElementById('surveyPinMode');
     if(originalPin?.getAttribute('aria-pressed')==='true')originalPin.click();
-    if(typeof setTouchMode==='function')setTouchMode('browse',false);
+    if(desktopAvailable()){
+      setDesktopPan(!desktopPan);
+      const status=document.getElementById('status');
+      if(status)status.textContent=desktopPan?'図面移動ON：マウス左ボタンを押したまま上下左右にドラッグしてください。編集する場合は「選択・移動・削除」などのツールを選びます。':'図面移動を解除しました。';
+    }else{
+      if(typeof setTouchMode==='function')setTouchMode('browse',false);
+      const status=document.getElementById('status');
+      if(status)status.textContent='図面移動中：指1本で上下左右、2本指で拡大縮小。図面の下端で上へスワイプすると次ページ、上端で下へスワイプすると前ページ。';
+      syncMove();
+    }
     workspace.focus({preventScroll:true});
-    const status=document.getElementById('status');
-    if(status)status.textContent='図面移動中：指1本で上下左右、2本指で拡大縮小。図面の下端で上へスワイプすると次ページ、上端で下へスワイプすると前ページ。';
-    syncMove();
   });
-  // Editing tools restore the existing editable touch mode.
-  document.getElementById('tools')?.addEventListener('click',()=>queueMicrotask(syncMove));
+  // Capture mouse events before app.js starts selecting or drawing annotations.
+  // Only intercept the actual PDF page, not toolbar controls or dialogs.
+  workspace.addEventListener('pointerdown',e=>{
+    if(!desktopPan||e.pointerType!=='mouse'||e.button!==0||!doc||rendering||pageBusy)return;
+    if(!e.target.closest('#paper,#continuousPageStack'))return;
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:workspace.scrollLeft,top:workspace.scrollTop,moved:false};
+    workspace.classList.add('desktop-pan-dragging');
+    try{workspace.setPointerCapture(e.pointerId)}catch{}
+    e.preventDefault();e.stopImmediatePropagation();
+  },true);
+  workspace.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    workspace.scrollLeft=drag.left-dx;
+    workspace.scrollTop=drag.top-dy;
+    if(Math.hypot(dx,dy)>4)drag.moved=true;
+    e.preventDefault();e.stopImmediatePropagation();
+  },true);
+  function endMousePan(e){
+    if(!drag||e.pointerId!==drag.id)return;
+    suppressClick=drag.moved;
+    drag=null;
+    workspace.classList.remove('desktop-pan-dragging');
+    if(workspace.hasPointerCapture?.(e.pointerId))workspace.releasePointerCapture(e.pointerId);
+    e.preventDefault();e.stopImmediatePropagation();
+  }
+  workspace.addEventListener('pointerup',endMousePan,true);
+  workspace.addEventListener('pointercancel',endMousePan,true);
+  workspace.addEventListener('lostpointercapture',()=>{
+    drag=null;workspace.classList.remove('desktop-pan-dragging');
+  });
+  workspace.addEventListener('click',e=>{
+    if(!desktopPan||!suppressClick)return;
+    suppressClick=false;
+    e.preventDefault();e.stopImmediatePropagation();
+  },true);
+  // Choosing an annotation tool exits mouse panning; the original tool
+  // handlers, electronic-pen selection, and finger navigation are unchanged.
+  document.getElementById('tools')?.addEventListener('click',e=>{
+    if(desktopAvailable()&&e.target.closest('[data-tool],#surveyPalettePin,#instructionPinPalette'))
+      setDesktopPan(false);
+    queueMicrotask(syncMove);
+  });
   document.getElementById('browseTouch')?.addEventListener('click',()=>queueMicrotask(syncMove));
   document.getElementById('editTouch')?.addEventListener('click',()=>queueMicrotask(syncMove));
+  mouseFine.addEventListener?.('change',()=>{if(!desktopAvailable())setDesktopPan(false);syncMove()});
   workspace.tabIndex=0;
   // Avoid abrupt view jumps when an annotation or page control is selected.
   syncMove();
