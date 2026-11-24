@@ -917,3 +917,15 @@ body.continuous-mode main>.workspace{
 .marker-width-controls:not([hidden]){display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 2px;padding:5px;background:#f8fbfc;border:1px solid #bacbd4;border-radius:8px;color:#173e53;font-size:13px;font-weight:700}
 .marker-width-controls button{width:38px;min-height:36px;border:1px solid #a8bfcb;border-radius:5px;background:#fff;color:#173e53;font-size:19px}
 .marker-width-controls output{min-width:31px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* v1.4.59: desktop mouse grab-to-pan; no annotation events while active */
+@media(pointer:fine){
+ main>.workspace.desktop-pan-active #paper,
+ main>.workspace.desktop-pan-active #paper *,
+ main>.workspace.desktop-pan-active #continuousPageStack,
+ main>.workspace.desktop-pan-active #continuousPageStack *{cursor:grab!important;user-select:none!important}
+ main>.workspace.desktop-pan-dragging #paper,
+ main>.workspace.desktop-pan-dragging #paper *,
+ main>.workspace.desktop-pan-dragging #continuousPageStack,
+ main>.workspace.desktop-pan-dragging #continuousPageStack *{cursor:grabbing!important}
+}
