@@ -906,3 +906,14 @@ body.continuous-mode main>.workspace{
  overflow-x:auto!important;
  overscroll-behavior-x:contain;
 }
+
+/* v1.4.58 PC mouse zoom in the fixed top navigation */
+#desktopZoomControls{display:flex;align-items:center;gap:4px}
+#desktopZoomControls output{display:inline-block;min-width:48px;text-align:center;font-size:13px;font-weight:700;color:#fff}
+#fixedPageNav #desktopZoomControls button{min-width:35px!important;min-height:35px!important;max-width:none!important;padding:3px 8px!important;font-size:20px!important;cursor:pointer}
+#fixedPageNav #desktopZoomControls button:disabled{opacity:.4;cursor:default}
+@media(max-width:1024px),(pointer:coarse){#desktopZoomControls{display:none!important}}
+/* Separate persistent marker-width control, visible when drawing markers */
+.marker-width-controls:not([hidden]){display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 2px;padding:5px;background:#f8fbfc;border:1px solid #bacbd4;border-radius:8px;color:#173e53;font-size:13px;font-weight:700}
+.marker-width-controls button{width:38px;min-height:36px;border:1px solid #a8bfcb;border-radius:5px;background:#fff;color:#173e53;font-size:19px}
+.marker-width-controls output{min-width:31px;text-align:center;font-variant-numeric:tabular-nums}
