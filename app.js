@@ -76,7 +76,16 @@ $('editText').addEventListener('compositionend',updateSelectedText);
 function updatePalette(){document.querySelectorAll('[data-color]').forEach(b=>{const active=b.dataset.color===currentColor;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))})}
 function chooseColor(color){currentColor=color;editSelectedWhere(o=>o.type!=='image'&&o.color!==color,o=>o.color=color);updatePalette()}
 document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>chooseColor(b.dataset.color));
-$('lineWidth').addEventListener('change',e=>{const v=Number(e.target.value);if(!Number.isFinite(v)||v<0||v>10||Math.round(v*2)!==v*2){syncEditor();return}editSelectedWhere(o=>['pen','rect','ellipse','arrow'].includes(o.type)&&o.lineWidth!==v,o=>o.lineWidth=v);syncEditor()});
+$('lineWidth').addEventListener('change',e=>{
+ const v=Number(e.target.value);
+ if(!Number.isFinite(v)||v<0||v>10||Math.round(v*2)!==v*2){syncEditor();return}
+ // Selected marker strokes use the same future-drawing width as the
+ // marker tool's dedicated +/- control. Ordinary pen width stays separate.
+ const markerSelected=selectedObjects().some(o=>o.type==='pen'&&o.markerStroke===true);
+ editSelectedWhere(o=>['pen','rect','ellipse','arrow'].includes(o.type)&&o.lineWidth!==v,o=>o.lineWidth=v);
+ if(markerSelected&&v>=.5)setMarkerWidth(v);
+ syncEditor();
+});
 function stepLineWidth(delta){if(rendering||pageBusy)return;const o=selectedObjects().find(o=>['pen','rect','ellipse','arrow'].includes(o.type));if(!o)return;const current=o.lineWidth??(o.type==='pen'?3:2);const value=Math.max(0,Math.min(10,Math.round((current+delta)*2)/2));if(value===current)return;$('lineWidth').value=String(value);$('lineWidth').dispatchEvent(new Event('change'))}
 $('lineWidthUp').onclick=()=>stepLineWidth(.5);$('lineWidthDown').onclick=()=>stepLineWidth(-.5);
 $('lineWidth').addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();stepLineWidth(e.key==='ArrowUp'?.5:-.5)}});
