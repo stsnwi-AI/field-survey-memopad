@@ -25,6 +25,8 @@
   zoomHome.append(zoom);
   bar.append(zoomHome);
   strip.append(pageControls,move);
+  const editablePageStatus=document.createElement('output');editablePageStatus.id='editablePageStatus';editablePageStatus.hidden=true;editablePageStatus.setAttribute('aria-live','polite');editablePageStatus.style.cssText='font:600 11px system-ui,sans-serif;padding:4px 6px;border-radius:5px;background:#e5f3f1;color:#145648;white-space:nowrap;';strip.append(editablePageStatus);
+  const visibleUndo=document.createElement('button');visibleUndo.type='button';visibleUndo.id='visibleUndo';visibleUndo.textContent='↶ 元に戻す';visibleUndo.title='直前の書き込み・編集・削除を取り消します';visibleUndo.setAttribute('aria-label','操作を元に戻す');visibleUndo.onclick=()=>document.getElementById('undo')?.click();strip.append(visibleUndo);
   // Always-visible desktop mouse zoom; share the existing zoom/select render path.
   const desktopZoom=document.createElement('div');
   desktopZoom.id='desktopZoomControls';
