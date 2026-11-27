@@ -70,7 +70,7 @@ $('placeNumber').onclick=()=>prepareStamp(String($('stampNumber').selectedIndex+
 const lineDialog=document.createElement('dialog');lineDialog.id='lineStyleDialog';
 lineDialog.innerHTML='<h2>線・背景・透明度を編集</h2><p>選択した線・図形にまとめて反映します。</p><label>線の色 <input id="applyStrokeColor" type="checkbox" hidden aria-label="線色を変更"><input id="strokeColorChoice" type="color" value="#e59a19"></label><label>不透明度（全体）<input id="objectOpacityChoice" type="number" min="0" max="100" step="1" aria-label="全体の不透明度パーセント"></label><div id="fillChoices"><label hidden>背景の塗りつぶし<select id="fillModeChoice"><option value="keep">変更しない</option><option value="none">なし（透明）</option><option value="color">色を指定</option></select></label><label>背景色<input id="fillColorChoice" type="color" value="#ffffff"></label><label>背景の不透明度<input id="fillOpacityChoice" type="number" min="0" max="100" step="1" aria-label="背景の不透明度パーセント"></label></div><p>不透明度：0%で透明、100%で不透明。</p><label>線種<select id="lineStyleChoice"><option value="">変更しない／混在</option><option value="solid">実線 ─</option><option value="dashed">破線 ┄</option><option value="dotted">点線 ⋯</option></select></label><div id="capChoices"><label>始点<select id="startCapChoice"></select></label><label>終点<select id="endCapChoice"></select></label></div><p id="capHint">先端の変更は矢印オブジェクトに適用します。「なし」で通常の直線になります。</p><div class="line-dialog-actions"><button id="cancelLineStyle">キャンセル</button><button id="applyLineStyle">反映</button></div>';
 document.body.append(lineDialog);
-for(const id of ['startCapChoice','endCapChoice'])for(const [value,label] of [['','変更しない／混在'],['none','なし'],['arrow','矢印 →'],['circle','丸 ●']]){const o=document.createElement('option');o.value=value;o.textContent=label;$(id).append(o)}
+for(const id of ['startCapChoice','endCapChoice'])for(const [value,label] of [['','変更しない／混在'],['none','なし（直線）'],['arrow','矢印 →'],['ring','丸 ○'],['square','四角 □'],['circle','塗り丸 ●']]){const o=document.createElement('option');o.value=value;o.textContent=label;$(id).append(o)}
 const lineTypes=['pen','rect','ellipse','arrow'];let lineTargets=null,linePage=null;
 function openLineStyle(){
  if(pageBusy||rendering||start||working)return;
@@ -119,7 +119,7 @@ inlineLineProperties.innerHTML=
  '<label>背景色<input id="inlineFill" type="color" value="#ffffff"></label>'+
  '<label>背景の透明度<input id="inlineFillOpacity" type="number" min="0" max="100" step="1" value="100" inputmode="numeric"></label>'+
  '<label class="inline-fill-clear"><input id="inlineNoFill" type="checkbox">背景なし</label>'+
- '</div><small>透明度：0＝透明、100＝不透明（％）</small>';
+ '</div><div id="inlineArrowCaps" class="inline-arrow-caps" hidden><label>始点の形<select id="inlineStartCap"><option value="">混在</option><option value="none">なし</option><option value="arrow">矢印 →</option><option value="ring">丸 ○</option><option value="square">四角 □</option><option value="circle">塗り丸 ●</option></select></label><label>終点の形<select id="inlineEndCap"><option value="">混在</option><option value="none">なし</option><option value="arrow">矢印 →</option><option value="ring">丸 ○</option><option value="square">四角 □</option><option value="circle">塗り丸 ●</option></select></label></div><small>透明度：0＝透明、100＝不透明（％）</small>';
 // The normal color chooser remains first; move these controls with that chooser.
 document.querySelector('#annotationTools > .palette')?.after(inlineLineProperties);
 const inlineFields=['inlineStroke','inlineLineStyle','inlineOpacity','inlineFill','inlineFillOpacity','inlineNoFill'].map(id=>document.getElementById(id));
@@ -128,6 +128,10 @@ function syncInlineLineProperties(){
  const objects=inlineTargets(),shapes=objects.filter(o=>['rect','ellipse'].includes(o.type));
  const lines=objects.filter(o=>lineTypes.includes(o.type));
  const active=objects.length>0&&!pageBusy&&!rendering;
+ const arrows=objects.filter(o=>o.type==='arrow');
+ const capRow=document.getElementById('inlineArrowCaps');
+ capRow.hidden=!active||!arrows.length;
+ for(const id of ['inlineStartCap','inlineEndCap'])document.getElementById(id).disabled=!active||!arrows.length;
  document.getElementById('inlineLineStatus').textContent=active
   ?objects.length+'件を編集中':'線・図形・マークを選ぶと編集できます';
  for(const control of inlineFields)control.disabled=!active;
@@ -135,6 +139,11 @@ function syncInlineLineProperties(){
  for(const id of ['inlineFill','inlineFillOpacity','inlineNoFill'])
   document.getElementById(id).disabled=!active||!shapes.length;
  if(!active)return;
+ if(arrows.length){
+  const commonCap=(key,fallback)=>{const values=arrows.map(o=>o[key]??fallback);return values.every(v=>v===values[0])?values[0]:''};
+  document.getElementById('inlineStartCap').value=commonCap('startCap','none');
+  document.getElementById('inlineEndCap').value=commonCap('endCap','arrow');
+ }
  const first=lines[0]||objects[0],common=(arr,key,fallback)=>{
   const values=arr.map(o=>o[key]??fallback);
   return values.every(value=>value===values[0])?values[0]:'';
@@ -169,6 +178,17 @@ function applyInlineLineProperty(property){
  syncInlineLineProperties();
 }
 for(const field of inlineFields)field.addEventListener('change',()=>applyInlineLineProperty(field.id));
+for(const [id,key] of [['inlineStartCap','startCap'],['inlineEndCap','endCap']]){
+ document.getElementById(id).addEventListener('change',e=>{
+  if(pageBusy||rendering||start||working)return;
+  const cap=e.target.value;
+  if(!['none','arrow','ring','square','circle'].includes(cap))return;
+  const arrows=selectedObjects().filter(o=>o.type==='arrow');
+  if(!arrows.length||!arrows.some(o=>(o[key]??(key==='startCap'?'none':'arrow'))!==cap))return;
+  snapshot();for(const o of arrows)o[key]=cap;
+  draw();syncInlineLineProperties();
+ });
+}
 const originalInlineTouchUpdate=window.updateTouchSelection;
 window.updateTouchSelection=function(...args){
  originalInlineTouchUpdate?.(...args);
@@ -193,3 +213,5 @@ function stopEditWindowDrag(e){if(editWindowDrag?.id!==e.pointerId)return;editWi
 editWindowTitle.onpointerup=stopEditWindowDrag;editWindowTitle.onpointercancel=stopEditWindowDrag;editWindowTitle.onlostpointercapture=()=>{editWindowDrag=null};
 editWindowTitle.onkeydown=e=>{const n=e.shiftKey?30:10,d={ArrowLeft:[-n,0],ArrowRight:[n,0],ArrowUp:[0,-n],ArrowDown:[0,n]}[e.key];if(d){e.preventDefault();e.stopPropagation();const r=lineDialog.getBoundingClientRect();placeEditWindow(r.left+d[0],r.top+d[1])}};
 window.addEventListener('resize',()=>placeEditWindow());lineDialog.addEventListener('close',()=>{editWindowDrag=null});
+
+/* v1.4.61: keep arrow-cap editing accessible in the existing settings palette. */
