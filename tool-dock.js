@@ -155,11 +155,12 @@
   function setMode(nextFloating) {
     floating = !!nextFloating;
     dock.classList.toggle('dock-floating', floating);
-    dock.classList.toggle('dock-horizontal', !floating);
-    document.body.classList.toggle('survey-horizontal-editor', !floating);
-    pin.textContent = floating ? '上部に配置' : '自由に移動';
+    dock.classList.toggle('dock-horizontal', false);
+    dock.classList.toggle('dock-left', !floating);
+    document.body.classList.toggle('survey-horizontal-editor', false);
+    pin.textContent = floating ? '左側に配置' : '自由に移動';
     pin.setAttribute('aria-pressed', String(!floating));
-    pin.title = floating ? '横一列の編集バーへ戻す' : 'コンパクトな移動パレットに戻す';
+    pin.title = floating ? '左端の縦型編集バーへ切り替え' : '自由に移動できるパレットへ戻す';
     grip.hidden = !floating;
     if (floating) {
       dock.style.removeProperty('width');
@@ -168,9 +169,9 @@
       dock.style.removeProperty('bottom');
       clampPosition(8, headerBottom() + 8);
     } else {
-      // Return to a full-width toolbar below the fixed title/navigation row.
+      // Compact vertical left rail leaves the PDF height unobstructed.
       dock.style.left = '0px';
-      dock.style.right = '0px';
+      dock.style.right = 'auto';
       dock.style.top = headerBottom() + 'px';
       dock.style.removeProperty('max-height');
       dock.style.removeProperty('bottom');
@@ -219,6 +220,26 @@
   grip.addEventListener('pointerup', stop);
   grip.addEventListener('lostpointercapture', stop);
   grip.addEventListener('pointercancel', stop);
+  // The palette heading also acts as a touch/mouse drag handle in floating mode.
+  const dockTitle=dock.querySelector('.dock-title');
+  if(dockTitle){
+    dockTitle.style.touchAction='none';
+    dockTitle.title='長押し不要：ここをドラッグしてパレットを移動';
+    dockTitle.addEventListener('pointerdown',e=>{
+      if(!floating||(e.button!==undefined&&e.button!==0))return;
+      const rect=dock.getBoundingClientRect();
+      drag={x:e.clientX,y:e.clientY,left:rect.left,top:rect.top,id:e.pointerId};
+      dockTitle.setPointerCapture(e.pointerId);e.preventDefault();
+    });
+    dockTitle.addEventListener('pointermove',e=>{
+      if(!drag||drag.id!==e.pointerId)return;
+      clampPosition(drag.left+e.clientX-drag.x,drag.top+e.clientY-drag.y);
+      e.preventDefault();
+    });
+    dockTitle.addEventListener('pointerup',stop);
+    dockTitle.addEventListener('pointercancel',stop);
+    dockTitle.addEventListener('lostpointercapture',stop);
+  }
   // Default to the movable palette without waiting for a separate editing-mode switch.
   setMode(true);
   window.addEventListener('resize', () => {
