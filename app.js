@@ -251,52 +251,69 @@ let lassoMode=false,lassoStroke=null;
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lassoMode){setMode(false);draw()}});
 })();
 canvas.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;if(!doc||rendering||pageBusy)return;dragSnapshotTaken=false;start=point(e);canvas.setPointerCapture(e.pointerId);if(tool==='text'){const hit=topAnnotationAt(start);if(hit>=0&&list()[hit].type==='text')setTool('select',false)}if(tool==='select'){const before=selectionIndices(),hit=topAnnotationAt(start),extend=e.shiftKey||window.multiSelectTouch;dragGroup=null;dragHandle=!extend&&before.length===1&&selected>=0?hitHandle(list()[selected],start):null;if(dragHandle){working=JSON.parse(JSON.stringify(list()[selected]));draw();return}if(extend){const next=new Set(before);if(hit>=0){if(next.has(hit))next.delete(hit);else next.add(hit)}selectIndices([...next]);start=null;working=null;syncEditor();draw();return}if(hit<0)selectIndices([]);else if(!before.includes(hit))selectIndices([hit]);else selected=hit;if(selected>=0){working=JSON.parse(JSON.stringify(list()[selected]));if(selectionIndices().length>1)dragGroup=selectionIndices().map(i=>({i,original:JSON.parse(JSON.stringify(list()[i]))}))}syncEditor();draw();return}if(tool==='stamp'&&stampPreset){snapshot();const o={type:'stamp',x:start.x-stampPreset.w/2,y:start.y-(stampPreset.shape==='instruction-pin'?stampPreset.h:stampPreset.h/2),...stampPreset,color:currentColor};list().push(o);start=null;setTool('select',false);selectIndices([list().length-1]);syncEditor();draw();return}if(tool==='text'){const t=$('text').value;if(!t.trim()){say('文字入力欄に、追加する文字を入力してください。');return}snapshot();list().push({type:tool,x:start.x,y:start.y,text:t,size:currentTextSize,...textStyleControls('text'),color:currentColor});selected=-1;draw();return}if(tool==='image'&&!imgSource)return;if(['arrow','rect','ellipse'].includes(tool))start=snapVertexPoint(start);working={type:tool==='highlight'?'pen':tool,x:start.x,y:start.y,w:0,h:0,color:currentColor,src:tool==='image'?imgSource:undefined,points:tool==='pen'||tool==='highlight'?[start]:undefined,...(tool==='pen'?{lineWidth:1}:tool==='highlight'?{lineWidth:markerWidth,opacity:.3,markerStroke:true}:{})};selected=-1};
-canvas.onpointermove=e=>{if(!working||!start){if(tool==='select'&&selected>=0){const h=hitHandle(list()[selected],point(e));canvas.style.cursor=h?(h.key==='nw'||h.key==='se'?'nwse-resize':h.key==='ne'||h.key==='sw'?'nesw-resize':h.key==='rotate'?'grab':'crosshair'):'move'}return;}const p=point(e),dx=p.x-start.x,dy=p.y-start.y;if(tool==='select'){if(!dragSnapshotTaken){if(dx===0&&dy===0)return;snapshot();dragSnapshotTaken=true}if(dragGroup){const snapped=snapTranslation(dragGroup.map(g=>g.original),dx,dy,selectionIndices());for(const {i,original}of dragGroup)moveAnnotation(list()[i],original,snapped.dx,snapped.dy);draw();return}const o=list()[selected];if(dragHandle){if(dragHandle.key==='rotate'){const b=bounds(working),cx=b.x+b.w/2,cy=b.y+b.h/2;o.rotation=(working.rotation||0)+(Math.atan2(p.y-cy,p.x-cx)-Math.atan2(start.y-cy,start.x-cx))*180/Math.PI}else resizeAnnotation(o,working,dragHandle,vertexSnapEnabled&&!(working.rotation||0)&&['arrow','rect','ellipse'].includes(working.type)?snapVertexPoint(p,selectionIndices()):p);draw();return}const snapped=snapTranslation([working],dx,dy,selectionIndices());o.x=working.x+snapped.dx;o.y=working.y+snapped.dy;if(o.type==='pen')o.points=working.points.map(v=>({x:v.x+dx,y:v.y+dy}))}else if(tool==='pen'||tool==='highlight')working.points.push(p);else{const end=['arrow','rect','ellipse'].includes(tool)?snapVertexPoint(p):p;working.w=end.x-start.x;working.h=end.y-start.y}draw()};
+let inkFrame=0;
+function requestInkDraw(){
+ if(inkFrame)return;
+ inkFrame=requestAnimationFrame(()=>{inkFrame=0;if(doc&&!rendering)draw()});
+}
+canvas.onpointermove=e=>{if(!working||!start){if(tool==='select'&&selected>=0){const h=hitHandle(list()[selected],point(e));canvas.style.cursor=h?(h.key==='nw'||h.key==='se'?'nwse-resize':h.key==='ne'||h.key==='sw'?'nesw-resize':h.key==='rotate'?'grab':'crosshair'):'move'}return;}const p=point(e),dx=p.x-start.x,dy=p.y-start.y;if(tool==='select'){if(!dragSnapshotTaken){if(dx===0&&dy===0)return;snapshot();dragSnapshotTaken=true}if(dragGroup){const snapped=snapTranslation(dragGroup.map(g=>g.original),dx,dy,selectionIndices());for(const {i,original}of dragGroup)moveAnnotation(list()[i],original,snapped.dx,snapped.dy);draw();return}const o=list()[selected];if(dragHandle){if(dragHandle.key==='rotate'){const b=bounds(working),cx=b.x+b.w/2,cy=b.y+b.h/2;o.rotation=(working.rotation||0)+(Math.atan2(p.y-cy,p.x-cx)-Math.atan2(start.y-cy,start.x-cx))*180/Math.PI}else resizeAnnotation(o,working,dragHandle,vertexSnapEnabled&&!(working.rotation||0)&&['arrow','rect','ellipse'].includes(working.type)?snapVertexPoint(p,selectionIndices()):p);draw();return}const snapped=snapTranslation([working],dx,dy,selectionIndices());o.x=working.x+snapped.dx;o.y=working.y+snapped.dy;if(o.type==='pen')o.points=working.points.map(v=>({x:v.x+dx,y:v.y+dy}))}else if(tool==='pen'||tool==='highlight'){working.points.push(p);requestInkDraw();return;}else{const end=['arrow','rect','ellipse'].includes(tool)?snapVertexPoint(p):p;working.w=end.x-start.x;working.h=end.y-start.y}draw()};
 /* v1.4.75: Snap ONLY a sufficiently straight completed freehand/marker
  * stroke into a clean segment. Keep type 'pen', styling and PDF JSON schema.
  * Do not alter existing saved strokes, loops, corners or clearly curved paths. */
+/* v1.4.79: quick, forgiving straight-line recognition for pen/marker.
+ * All decisions are local to the new stroke. Preserve old strokes as-is. */
 function straightenCompletedStroke(o){
  if(o?.type!=='pen'||!Array.isArray(o.points)||o.points.length<2)return;
- const pts=o.points.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y));
- if(pts.length<2)return;
+ const pts=o.points;
  const first=pts[0],last=pts[pts.length-1];
- const dx=last.x-first.x,dy=last.y-first.y,length=Math.hypot(dx,dy);
- const z=Math.max(.25,scale);
- // Short marks, circles, deliberate corners and returns remain freehand.
- if(length<14/z)return;
- const ux=dx/length,uy=dy/length;
- // More forgiving than v1.4.75 for small hand tremor / waviness.
- // Combine peak error, overall RMS, travel and reversal checks.
- const peakLimit=Math.min(18/z,Math.max(7/z,length*.10));
- const rmsLimit=Math.min(9/z,Math.max(3.5/z,length*.055));
- let maxDeviation=0,sumSquared=0,travel=0,reversals=0,prevProjection=0;
- let previous=pts[0];
+ if(!pts.every(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)))return;
+ const dx=last.x-first.x,dy=last.y-first.y,L=Math.hypot(dx,dy),z=Math.max(.25,scale);
+ if(L<13/z)return;
+ const ux=dx/L,uy=dy/L;
+ // Large waves are accepted while a C/U-shaped arc is left intact.
+ const peakLimit=Math.min(44/z,Math.max(12/z,L*.28));
+ const rmsLimit=Math.min(23/z,Math.max(6/z,L*.15));
+ let peak=0,energy=0,travel=0,back=0,previous=first,prevAlong=0;
+ let positive=0,negative=0;
  for(let i=0;i<pts.length;i++){
   const p=pts[i],vx=p.x-first.x,vy=p.y-first.y;
-  const along=vx*ux+vy*uy,deviation=Math.abs(vx*uy-vy*ux);
-  maxDeviation=Math.max(maxDeviation,deviation);
-  sumSquared+=deviation*deviation;
+  const along=vx*ux+vy*uy,signed=vx*uy-vy*ux,dev=Math.abs(signed);
+  peak=Math.max(peak,dev);energy+=signed*signed;
+  if(signed>2/z)positive++;else if(signed< -2/z)negative++;
   if(i){
    travel+=Math.hypot(p.x-previous.x,p.y-previous.y);
-   if(along<prevProjection-1.5/z)reversals+=prevProjection-along;
+   if(along<prevAlong-2/z)back+=prevAlong-along;
   }
-  prevProjection=along;previous=p;
+  prevAlong=along;previous=p;
  }
- const rms=Math.sqrt(sumSquared/pts.length);
- if(maxDeviation>peakLimit||rms>rmsLimit||travel>length*1.55||reversals>length*.12)return;
- // The original object is not converted to an arrow: marker color, opacity,
- // width, rounded cap, editing and embedded-PDF schema remain unchanged.
- // Snap both new endpoints independently to nearby existing geometry.
- // These anchors are also used when later moving a straightened line.
- const targets=snapCandidates();
- const radius=14/z;
+ const rms=Math.sqrt(energy/pts.length);
+ if(peak>peakLimit||rms>rmsLimit||travel>L*2.35||back>L*.18)return;
+ // Avoid flattening a strongly one-sided curved arc even when the
+ // larger wave allowance would otherwise accept it.
+ if(peak>Math.max(6/z,L*.065)&&Math.min(positive,negative)<pts.length*.07)return;
+ const targets=snapCandidates(),radius=16/z;
  const a=closestSnap(first,targets,radius)||first;
  const b=closestSnap(last,targets,radius)||last;
  if(Math.hypot(b.x-a.x,b.y-a.y)<8/z)return;
  o.points=[{x:a.x,y:a.y},{x:b.x,y:b.y}];
  o.straightened=true;
 }
-function finish(){if(working&&tool!=='select'){if(tool==='pen'||tool==='highlight'||Math.abs(working.w)>3&&Math.abs(working.h)>3||tool==='arrow'&&Math.hypot(working.w,working.h)>3){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}if(tool==='pen'||tool==='highlight')straightenCompletedStroke(working);snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
+function finish(e){
+ if(inkFrame){cancelAnimationFrame(inkFrame);inkFrame=0}
+ if(working&&start&&e?.type==='pointerup'&&Number.isFinite(e.clientX)&&Number.isFinite(e.clientY)){
+  const p=point(e);
+  if(tool==='pen'||tool==='highlight'){
+   const last=working.points?.at(-1);
+   if(last&&Math.hypot(last.x-p.x,last.y-p.y)>.5/Math.max(scale,.25))working.points.push(p);
+  }else if(['rect','ellipse','arrow','image'].includes(tool)){
+   const end=['rect','ellipse','arrow'].includes(tool)?snapVertexPoint(p):p;
+   working.w=end.x-start.x;working.h=end.y-start.y;
+  }
+ }
+ if(working&&tool!=='select'){
+  const shape=['rect','ellipse','image'].includes(tool),vector=tool==='arrow';
+  const valid=tool==='pen'||tool==='highlight'||shape&&(Math.abs(working.w)>=2&&Math.abs(working.h)>=2)||vector&&Math.hypot(working.w,working.h)>=3;
+  if(valid){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}if(tool==='pen'||tool==='highlight')straightenCompletedStroke(working);snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
 $('undo').onclick=()=>travelHistory(false);$('delete').onclick=removeSelectedObjects;
 $('prev').onclick=()=>{if(page>1&&!rendering){page--;selected=-1;render().catch(e=>say('ページの表示に失敗しました：'+e.message))}};$('next').onclick=()=>{if(doc&&page<doc.numPages&&!rendering){page++;selected=-1;render().catch(e=>say('ページの表示に失敗しました：'+e.message))}};$('zoom').onchange=()=>render().catch(e=>say('ページの表示に失敗しました：'+e.message));
 function download(data,name){const u=URL.createObjectURL(new Blob([data],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}
