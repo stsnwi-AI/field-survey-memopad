@@ -251,13 +251,23 @@
   edge.title='左端に触れて書き込みパレットを表示';
   document.body.append(edge);
   let idleTimer=null;
-  let pointerInside=false;
+  let activeTouches=0;
+  let mouseInside=false;
+  let lastInput='touch';
+  function interacting(){
+    // Touch-generated focus and hover are sticky in Safari: never use
+    // :hover or a focused toolbar button as proof of ongoing tablet use.
+    if(activeTouches>0)return true;
+    const active=document.activeElement;
+    const editing=active?.matches?.('input,textarea,select,[contenteditable="true"]');
+    if(editing&&dock.contains(active))return true;
+    if(document.getElementById('dockEditSettings')?.open)return true;
+    return lastInput==='mouse'&&mouseInside;
+  }
   function hideRail(){
-    if(pointerInside || dock.contains(document.activeElement) ||
-       document.getElementById('dockEditSettings')?.open){
-      scheduleHide();return;
-    }
+    if(interacting()){scheduleHide();return}
     dock.classList.remove('auto-rail-open');
+    edge.setAttribute('aria-expanded','false');
   }
   function scheduleHide(){
     clearTimeout(idleTimer);
@@ -266,35 +276,70 @@
   function revealRail(){
     if(dock.classList.contains('dock-collapsed'))setDockVisible(true);
     dock.classList.add('auto-rail-open');
+    edge.setAttribute('aria-expanded','true');
     scheduleHide();
   }
-  edge.addEventListener('pointerenter',revealRail);
-  edge.addEventListener('pointerdown',revealRail);
+  edge.setAttribute('aria-expanded','false');
+  edge.setAttribute('aria-controls','surveyToolDock');
+  // Make the touch target visible and usable without a tiny 18px precise tap.
+  edge.addEventListener('pointerenter',e=>{
+    lastInput=e.pointerType||'mouse';
+    if(e.pointerType==='mouse')revealRail();
+  });
+  edge.addEventListener('pointerdown',e=>{
+    lastInput=e.pointerType||'touch';revealRail();
+  });
+  edge.addEventListener('click',revealRail);
+  edge.addEventListener('touchstart',()=>{lastInput='touch';revealRail()},{passive:true});
   edge.addEventListener('focus',revealRail);
   edge.addEventListener('keydown',e=>{
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();revealRail();}
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();revealRail()}
   });
-  dock.addEventListener('pointerenter',()=>{pointerInside=true;revealRail()});
-  dock.addEventListener('pointerleave',()=>{pointerInside=false;scheduleHide()});
-  dock.addEventListener('pointerdown',revealRail);
+  dock.addEventListener('pointerenter',e=>{
+    lastInput=e.pointerType||'mouse';
+    mouseInside=e.pointerType==='mouse';revealRail();
+  });
+  dock.addEventListener('pointerleave',e=>{
+    if(e.pointerType==='mouse')mouseInside=false;
+    scheduleHide();
+  });
+  dock.addEventListener('pointerdown',e=>{
+    lastInput=e.pointerType||'touch';
+    if(e.pointerType!=='mouse')activeTouches++;
+    revealRail();
+  });
+  const endInteraction=e=>{
+    if(e.pointerType!=='mouse')activeTouches=Math.max(0,activeTouches-1);
+    scheduleHide();
+  };
+  document.addEventListener('pointerup',endInteraction,true);
+  document.addEventListener('pointercancel',endInteraction,true);
   dock.addEventListener('click',revealRail);
-  dock.addEventListener('focusin',revealRail);
-  dock.addEventListener('focusout',()=>{pointerInside=false;scheduleHide()});
-  document.addEventListener('pointermove',e=>{
-    if(e.pointerType==='mouse'&&e.clientX<=18&&e.clientY>=headerBottom())revealRail();
-  },{passive:true});
-  // One tap at the edge reveals the palette without consuming the PDF pointer.
-  // Outside touches only close an already idle palette, never alter annotations.
+  dock.addEventListener('focusin',()=>{revealRail()});
+  dock.addEventListener('focusout',scheduleHide);
+  // Capture-phase detection also works when the canvas overlay occupies
+  // the touch target area and Safari skips pointerenter on touch.
   document.addEventListener('pointerdown',e=>{
-    if(!dock.contains(e.target)&&!edge.contains(e.target)&&e.clientX>24){
-      pointerInside=false;scheduleHide();
+    if(e.clientX<=42 && e.clientY>=headerBottom() && e.clientY<innerHeight-8){
+      lastInput=e.pointerType||'touch';revealRail();return;
     }
+    if(!dock.contains(e.target)){mouseInside=false;scheduleHide();}
   },true);
+  document.addEventListener('touchstart',e=>{
+    const t=e.touches?.[0];
+    if(t&&t.clientX<=42&&t.clientY>=headerBottom()){
+      lastInput='touch';revealRail();
+    }
+  },{capture:true,passive:true});
+  document.addEventListener('pointermove',e=>{
+    if(e.pointerType==='mouse'&&e.clientX<=42&&e.clientY>=headerBottom()){
+      lastInput='mouse';revealRail();
+    }
+  },{passive:true});
   setMode(false);
   dock.classList.remove('auto-rail-open');
-  // Only the edge sensor is visible until touched; tool actions remain intact.
   window.addEventListener('blur',()=>{
-    pointerInside=false;clearTimeout(idleTimer);
+    mouseInside=false;activeTouches=0;clearTimeout(idleTimer);
     dock.classList.remove('auto-rail-open');
   });
   window.addEventListener('resize', () => {
