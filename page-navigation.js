@@ -105,6 +105,19 @@
   };
   strip.append(addPDF);
 
+  // v1.4.73: Place ORIGINAL file-open, save and input-method controls
+  // beside the page/zoom icons. Reparent, do not clone: keep event listeners.
+  const extraCommands=document.createElement('div');
+  extraCommands.id='unifiedToolbarExtras';
+  for(const id of ['workspaceAddPDF']){
+    const el=document.getElementById(id);
+    if(el)extraCommands.append(el);
+  }
+  for(const selector of ['body>header>.open','body>header>#save','body>header>#inputMethodToggle']){
+    const el=document.querySelector(selector);
+    if(el)extraCommands.append(el);
+  }
+  strip.append(extraCommands);
   // Desktop mouse panning is opt-in and must never change PDF annotations.
   // Touch panning remains owned by mobile.js.
   const mouseFine=window.matchMedia('(pointer:fine)');
