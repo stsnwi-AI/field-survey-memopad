@@ -167,6 +167,71 @@ workspace.addEventListener('scroll',()=>{
   }
  },135);
 },{passive:true});
+// v1.4.67: non-destructive overview. Up to 32 low-resolution thumbnails per screen.
+const overviewButton=document.createElement('button');
+overviewButton.type='button';overviewButton.id='pageOverviewButton';
+overviewButton.textContent='▦ 一覧';overviewButton.title='ページを最大32枚ずつ一覧表示して移動';
+const nav=document.getElementById('fixedPageNav');
+if(nav)nav.append(overviewButton);
+const overview=document.createElement('section');
+overview.id='pageOverview';overview.hidden=true;
+overview.setAttribute('role','dialog');overview.setAttribute('aria-label','PDFページ一覧');
+overview.innerHTML='<div class="overview-heading"><strong id="overviewHeading">ページ一覧</strong><button type="button" id="overviewPrev">前の32枚</button><button type="button" id="overviewNext">次の32枚</button><button type="button" id="overviewClose">× 閉じる</button></div><div id="overviewGrid"></div>';
+workspace.append(overview);
+const overviewGrid=overview.querySelector('#overviewGrid');
+let overviewStart=0,overviewSerial=0;
+function closeOverview(){overview.hidden=true;overviewSerial++;}
+overview.querySelector('#overviewClose').onclick=closeOverview;
+overviewButton.onclick=()=>{
+ if(!doc||!cards.length)return;
+ if(!overview.hidden){closeOverview();return}
+ overviewStart=Math.floor((page-1)/32)*32;
+ overview.hidden=false;void showOverview();
+};
+overview.querySelector('#overviewPrev').onclick=()=>{overviewStart=Math.max(0,overviewStart-32);void showOverview()};
+overview.querySelector('#overviewNext').onclick=()=>{overviewStart=Math.min(Math.floor((cards.length-1)/32)*32,overviewStart+32);void showOverview()};
+async function showOverview(){
+ if(overview.hidden)return;
+ const serial=++overviewSerial;
+ const first=overviewStart,last=Math.min(cards.length,first+32);
+ overview.querySelector('#overviewHeading').textContent='ページ一覧 '+(first+1)+'～'+last+' / '+cards.length;
+ overview.querySelector('#overviewPrev').disabled=first===0;
+ overview.querySelector('#overviewNext').disabled=last>=cards.length;
+ overviewGrid.replaceChildren();
+ const thumbs=[];
+ for(let i=first;i<last;i++){
+  const button=document.createElement('button');button.type='button';button.className='overview-page';
+  if(i===page-1)button.classList.add('current');
+  const thumb=document.createElement('canvas');thumb.width=1;thumb.height=1;
+  const name=document.createElement('span');name.textContent=String(i+1);
+  button.append(thumb,name);overviewGrid.append(button);thumbs.push({button,thumb,i});
+  button.onclick=()=>{
+   const target=cards[i];closeOverview();if(!target)return;
+   target.card.scrollIntoView({behavior:'instant',block:'start'});
+   void activate(target);
+  };
+ }
+ // Thumbnails are low-resolution and generated in small sequential batches.
+ for(const t of thumbs){
+  if(serial!==overviewSerial||overview.hidden)break;
+  try{
+   const entry=pageEntries[t.i];
+   const source=await sources[entry.source].doc.getPage(entry.index);
+   if(serial!==overviewSerial||overview.hidden)break;
+   const base=source.getViewport({scale:1,rotation:source.rotate+(entry.rotation||0)});
+   const z=Math.min(148/Math.max(base.width,1),104/Math.max(base.height,1),1);
+   const vp=source.getViewport({scale:z,rotation:source.rotate+(entry.rotation||0)});
+   t.thumb.width=Math.max(1,Math.round(vp.width));
+   t.thumb.height=Math.max(1,Math.round(vp.height));
+   const g=t.thumb.getContext('2d');
+   await source.render({canvasContext:g,viewport:vp}).promise;
+   g.save();g.scale(z,z);applyPageTurn(g,entry);
+   for(const object of items[entry.id]||[])paint(g,object);
+   g.restore();
+  }catch(e){console.warn('Overview preview skipped',t.i+1,e)}
+ }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!overview.hidden)closeOverview()});
 const goToPage=(delta)=>{
  const target=cards[page-1+delta];if(!target)return;
  target.card.scrollIntoView({behavior:'smooth',block:'start'});
@@ -195,6 +260,7 @@ const zoom=document.getElementById('zoom');
  };
  zoom?.addEventListener('change',()=>{clearTimeout(zoomRefreshTimer);zoomRefreshTimer=setTimeout(()=>{if(!rendering)void build()},180)});
  window.surveyPDFLoaded=async p=>{
+ closeOverview();
  await oldSurveyLoaded?.(p);
  await build();
 };
