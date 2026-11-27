@@ -40,3 +40,14 @@ body>header,body>header button,.workspace canvas,#overlay{
  -webkit-user-select:text!important;user-select:text!important;
  -webkit-touch-callout:default!important;
 }
+
+/* Keep the percentage readable next to - / + / Overview. */
+#desktopZoomControls #desktopZoomOut{order:0!important}
+#desktopZoomControls #desktopZoomIn{order:1!important}
+#desktopZoomControls #desktopZoomValue{
+ order:2!important;display:inline-block!important;visibility:visible!important;
+ flex:0 0 auto!important;width:auto!important;min-width:36px!important;
+ padding:0 2px!important;color:#f4fbff!important;
+ font:700 11px system-ui,sans-serif!important;text-align:center!important;
+}
+#desktopZoomControls #pageOverviewButton{order:3!important}
