@@ -86,7 +86,7 @@
         hold=e.pointerId;setOpen(true);
         try{trigger.setPointerCapture(e.pointerId)}catch{}
         e.preventDefault();
-      }else setOpen(true);
+      }
     });
     trigger.addEventListener('pointerup',e=>{
       if(hold!==e.pointerId)return;
