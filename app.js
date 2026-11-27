@@ -157,7 +157,32 @@ function hitAnnotation(o,p){
 function topAnnotationAt(p){for(let i=list().length-1;i>=0;i--)if(hitAnnotation(list()[i],p))return i;return -1}
 canvas.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;if(!doc||rendering||pageBusy)return;dragSnapshotTaken=false;start=point(e);canvas.setPointerCapture(e.pointerId);if(tool==='text'){const hit=topAnnotationAt(start);if(hit>=0&&list()[hit].type==='text')setTool('select',false)}if(tool==='select'){const before=selectionIndices(),hit=topAnnotationAt(start),extend=e.shiftKey||window.multiSelectTouch;dragGroup=null;dragHandle=!extend&&before.length===1&&selected>=0?hitHandle(list()[selected],start):null;if(dragHandle){working=JSON.parse(JSON.stringify(list()[selected]));draw();return}if(extend){const next=new Set(before);if(hit>=0){if(next.has(hit))next.delete(hit);else next.add(hit)}selectIndices([...next]);start=null;working=null;syncEditor();draw();return}if(hit<0)selectIndices([]);else if(!before.includes(hit))selectIndices([hit]);else selected=hit;if(selected>=0){working=JSON.parse(JSON.stringify(list()[selected]));if(selectionIndices().length>1)dragGroup=selectionIndices().map(i=>({i,original:JSON.parse(JSON.stringify(list()[i]))}))}syncEditor();draw();return}if(tool==='stamp'&&stampPreset){snapshot();const o={type:'stamp',x:start.x-stampPreset.w/2,y:start.y-(stampPreset.shape==='instruction-pin'?stampPreset.h:stampPreset.h/2),...stampPreset,color:currentColor};list().push(o);start=null;setTool('select',false);selectIndices([list().length-1]);syncEditor();draw();return}if(tool==='text'){const t=$('text').value;if(!t.trim()){say('文字入力欄に、追加する文字を入力してください。');return}snapshot();list().push({type:tool,x:start.x,y:start.y,text:t,size:currentTextSize,...textStyleControls('text'),color:currentColor});selected=-1;draw();return}if(tool==='image'&&!imgSource)return;if(['arrow','rect','ellipse'].includes(tool))start=snapVertexPoint(start);working={type:tool==='highlight'?'pen':tool,x:start.x,y:start.y,w:0,h:0,color:currentColor,src:tool==='image'?imgSource:undefined,points:tool==='pen'||tool==='highlight'?[start]:undefined,...(tool==='pen'?{lineWidth:1}:tool==='highlight'?{lineWidth:markerWidth,opacity:.3,markerStroke:true}:{})};selected=-1};
 canvas.onpointermove=e=>{if(!working||!start){if(tool==='select'&&selected>=0){const h=hitHandle(list()[selected],point(e));canvas.style.cursor=h?(h.key==='nw'||h.key==='se'?'nwse-resize':h.key==='ne'||h.key==='sw'?'nesw-resize':h.key==='rotate'?'grab':'crosshair'):'move'}return;}const p=point(e),dx=p.x-start.x,dy=p.y-start.y;if(tool==='select'){if(!dragSnapshotTaken){if(dx===0&&dy===0)return;snapshot();dragSnapshotTaken=true}if(dragGroup){const snapped=snapTranslation(dragGroup.map(g=>g.original),dx,dy,selectionIndices());for(const {i,original}of dragGroup)moveAnnotation(list()[i],original,snapped.dx,snapped.dy);draw();return}const o=list()[selected];if(dragHandle){if(dragHandle.key==='rotate'){const b=bounds(working),cx=b.x+b.w/2,cy=b.y+b.h/2;o.rotation=(working.rotation||0)+(Math.atan2(p.y-cy,p.x-cx)-Math.atan2(start.y-cy,start.x-cx))*180/Math.PI}else resizeAnnotation(o,working,dragHandle,vertexSnapEnabled&&!(working.rotation||0)&&['arrow','rect','ellipse'].includes(working.type)?snapVertexPoint(p,selectionIndices()):p);draw();return}const snapped=snapTranslation([working],dx,dy,selectionIndices());o.x=working.x+snapped.dx;o.y=working.y+snapped.dy;if(o.type==='pen')o.points=working.points.map(v=>({x:v.x+dx,y:v.y+dy}))}else if(tool==='pen'||tool==='highlight')working.points.push(p);else{const end=['arrow','rect','ellipse'].includes(tool)?snapVertexPoint(p):p;working.w=end.x-start.x;working.h=end.y-start.y}draw()};
-function finish(){if(working&&tool!=='select'){if(tool==='pen'||tool==='highlight'||Math.abs(working.w)>3&&Math.abs(working.h)>3||tool==='arrow'&&Math.hypot(working.w,working.h)>3){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
+/* v1.4.75: Snap ONLY a sufficiently straight completed freehand/marker
+ * stroke into a clean segment. Keep type 'pen', styling and PDF JSON schema.
+ * Do not alter existing saved strokes, loops, corners or clearly curved paths. */
+function straightenCompletedStroke(o){
+ if(o?.type!=='pen'||!Array.isArray(o.points)||o.points.length<2)return;
+ const pts=o.points.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y));
+ if(pts.length<2)return;
+ const first=pts[0],last=pts[pts.length-1],dx=last.x-first.x,dy=last.y-first.y;
+ const length=Math.hypot(dx,dy);
+ if(length<18/Math.max(scale,.25))return;
+ const ux=dx/length,uy=dy/length;
+ // A reversed stroke or sharp bend is not a straight stroke.
+ const tolerance=Math.min(4/Math.max(scale,.25),Math.max(1.6/Math.max(scale,.25),length*.025));
+ let previous=-Infinity,backtrack=0;
+ for(const p of pts){
+  const px=p.x-first.x,py=p.y-first.y;
+  const along=px*ux+py*uy;
+  const deviation=Math.abs(px*uy-py*ux);
+  if(deviation>tolerance)return;
+  if(along<previous-2/Math.max(scale,.25))backtrack+=previous-along;
+  previous=along;
+ }
+ if(backtrack>Math.max(3/Math.max(scale,.25),length*.035))return;
+ o.points=[{x:first.x,y:first.y},{x:last.x,y:last.y}];
+}
+function finish(){if(working&&tool!=='select'){if(tool==='pen'||tool==='highlight'||Math.abs(working.w)>3&&Math.abs(working.h)>3||tool==='arrow'&&Math.hypot(working.w,working.h)>3){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}if(tool==='pen'||tool==='highlight')straightenCompletedStroke(working);snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
 $('undo').onclick=()=>travelHistory(false);$('delete').onclick=removeSelectedObjects;
 $('prev').onclick=()=>{if(page>1&&!rendering){page--;selected=-1;render().catch(e=>say('ページの表示に失敗しました：'+e.message))}};$('next').onclick=()=>{if(doc&&page<doc.numPages&&!rendering){page++;selected=-1;render().catch(e=>say('ページの表示に失敗しました：'+e.message))}};$('zoom').onchange=()=>render().catch(e=>say('ページの表示に失敗しました：'+e.message));
 function download(data,name){const u=URL.createObjectURL(new Blob([data],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}
