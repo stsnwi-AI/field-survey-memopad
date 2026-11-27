@@ -172,7 +172,12 @@ const overviewButton=document.createElement('button');
 overviewButton.type='button';overviewButton.id='pageOverviewButton';
 overviewButton.textContent='▦ 一覧';overviewButton.title='ページを最大32枚ずつ一覧表示して移動';
 const nav=document.getElementById('fixedPageNav');
-if(nav)nav.append(overviewButton);
+if(nav){
+  const zoomButtons=document.getElementById('desktopZoomControls');
+  // Keep overview immediately to the right of - and + at all times.
+  if(zoomButtons)zoomButtons.append(overviewButton);
+  else nav.append(overviewButton);
+}
 const overview=document.createElement('section');
 overview.id='pageOverview';overview.hidden=true;
 overview.setAttribute('role','dialog');overview.setAttribute('aria-label','PDFページ一覧');
