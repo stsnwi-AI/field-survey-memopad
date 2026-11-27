@@ -226,14 +226,25 @@
     dockTitle.style.touchAction='none';
     dockTitle.title='長押し不要：ここをドラッグしてパレットを移動';
     dockTitle.addEventListener('pointerdown',e=>{
-      if(!floating||(e.button!==undefined&&e.button!==0))return;
+      if(!floating){
+        if(e.button!==undefined&&e.button!==0)return;
+        const rect=dock.getBoundingClientRect();
+        drag={x:e.clientX,y:e.clientY,left:rect.left,top:rect.top,id:e.pointerId,leftRail:true};
+        dockTitle.setPointerCapture(e.pointerId);
+        e.preventDefault();return;
+      }
+      if(e.button!==undefined&&e.button!==0)return;
       const rect=dock.getBoundingClientRect();
       drag={x:e.clientX,y:e.clientY,left:rect.left,top:rect.top,id:e.pointerId};
       dockTitle.setPointerCapture(e.pointerId);e.preventDefault();
     });
     dockTitle.addEventListener('pointermove',e=>{
       if(!drag||drag.id!==e.pointerId)return;
-      clampPosition(drag.left+e.clientX-drag.x,drag.top+e.clientY-drag.y);
+      if(drag.leftRail){
+        const topLimit=headerBottom()+3;
+        const h=dock.getBoundingClientRect().height;
+        dock.style.top=Math.max(topLimit,Math.min(Math.max(topLimit,innerHeight-h-6),drag.top+e.clientY-drag.y))+'px';
+      }else clampPosition(drag.left+e.clientX-drag.x,drag.top+e.clientY-drag.y);
       e.preventDefault();
     });
     dockTitle.addEventListener('pointerup',stop);
@@ -343,7 +354,11 @@
     dock.classList.remove('auto-rail-open');
   });
   window.addEventListener('resize', () => {
-    if (!floating) { dock.style.top = headerBottom() + 'px'; return; }
+    if (!floating) {
+      const topLimit=headerBottom()+3,rect=dock.getBoundingClientRect();
+      dock.style.top=Math.max(topLimit,Math.min(Math.max(topLimit,innerHeight-rect.height-6),parseFloat(dock.style.top)||topLimit))+'px';
+      return;
+    }
     const rect=dock.getBoundingClientRect();
     clampPosition(rect.left,rect.top);
   });
