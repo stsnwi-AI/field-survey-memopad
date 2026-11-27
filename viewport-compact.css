@@ -1,0 +1,58 @@
+/* v1.4.67: tablet/desktop viewport-first layout, no edit data changes. */
+#editablePageStatus{display:none!important}
+#fixedPageNav #visibleUndo{font-size:24px!important;font-weight:750!important;padding:2px 8px!important;min-width:41px!important;flex:0 0 auto}
+#fixedPageNav #pageOverviewButton{font-size:13px!important;white-space:nowrap;min-width:60px!important;max-width:none!important;padding:4px 7px!important}
+#fixedPageNav{gap:3px!important;max-width:calc(100vw - 6px);overflow-x:auto;scrollbar-width:none}
+#fixedPageNav::-webkit-scrollbar{display:none}
+#fixedPageNav #desktopZoomControls{display:flex!important;flex-shrink:0}
+#fixedPageNav #desktopZoomControls button{min-width:36px!important;min-height:40px!important;max-width:none!important}
+#fixedPageNav #desktopZoomControls output{min-width:40px;font-size:11px}
+@media(max-width:1024px),(pointer:coarse){
+ #fixedPageNav #desktopZoomControls{display:flex!important}
+ #fixedPageNav #desktopZoomControls output{display:none}
+ body>header .brand{display:none!important}
+ body>header{min-height:45px!important;gap:3px!important;padding:2px 4px!important}
+ #fixedPageNav{flex:1 1 auto!important;min-width:0!important;justify-content:flex-start!important}
+ #fixedPageNav #panDrawing{position:static!important;right:auto!important;top:auto!important;min-width:40px!important;max-width:52px!important;font-size:0!important}
+ #fixedPageNav #panDrawing::after{content:"✋";font-size:20px!important}
+ #fixedPageNav #page{min-width:48px!important}
+ main>.workspace{height:calc(100dvh - 48px)!important}
+}
+#surveyToolDock.dock-left{
+ position:fixed!important;left:0!important;right:auto!important;width:67px!important;
+ max-width:67px!important;max-height:calc(100dvh - 60px)!important;
+ z-index:49!important;display:flex!important;flex-direction:column!important;
+ flex-wrap:nowrap!important;overflow-y:auto!important;overflow-x:hidden!important;
+ gap:4px!important;padding:4px!important;box-sizing:border-box!important;
+ background:#edf4f7!important;border:1px solid #acc2ce!important;border-radius:0 9px 9px 0!important;
+ box-shadow:3px 2px 10px #16394a27!important;
+}
+#surveyToolDock.dock-left.dock-collapsed{display:none!important}
+#surveyToolDock.dock-left .dock-title{font-size:10px!important;white-space:normal;text-align:center;line-height:1.15}
+#surveyToolDock.dock-left .dock-tools{display:block!important;width:100%!important;flex:none!important;overflow:visible!important}
+#surveyToolDock.dock-left #tools{display:flex!important;flex-flow:column nowrap!important;gap:3px!important;width:100%!important}
+#surveyToolDock.dock-left #tools button{width:100%!important;min-width:0!important;max-width:none!important;min-height:45px!important;padding:4px!important}
+#surveyToolDock.dock-left #tools button>span{position:absolute!important;width:1px!important;height:1px!important;clip-path:inset(50%)!important;overflow:hidden!important}
+#surveyToolDock.dock-left #tools button svg{width:22px!important;height:22px!important;flex:none!important}
+#surveyToolDock.dock-left #dockMode,#surveyToolDock.dock-left #dockEditTrigger{width:100%!important;min-height:38px!important;font-size:10px!important;padding:3px!important;white-space:normal!important}
+#surveyToolDock.dock-left #dockGrip{display:none!important}
+#surveyToolDock.dock-left #delete.dock-delete-action{display:none!important}
+#surveyToolDock.dock-left .dock-selected-label{display:none!important}
+#surveyToolDock.dock-floating .dock-title{touch-action:none!important;cursor:grab}
+#surveyToolDock.dock-floating .dock-title:active{cursor:grabbing}
+#pageOverview[hidden]{display:none!important}
+#pageOverview{
+ position:fixed;z-index:90;top:52px;left:6px;right:6px;bottom:6px;
+ background:#f4f8fb;box-shadow:0 8px 35px #16394d88;border:1px solid #a8c1cc;
+ border-radius:10px;display:flex;flex-direction:column;padding:8px;overflow:hidden;
+}
+#pageOverview .overview-heading{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:7px}
+#pageOverview .overview-heading strong{flex:1 1 auto}
+#pageOverview .overview-heading button{min-height:38px;min-width:44px;border:1px solid #a7bcc9;background:white;border-radius:6px;padding:5px 8px}
+#pageOverview #overviewGrid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;overflow-y:auto;min-height:0;flex:1;align-content:start}
+#pageOverview .overview-page{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;min-width:0;min-height:118px;background:white;border:1px solid #a8bdcc;border-radius:6px;color:#183d51;font-weight:750}
+#pageOverview .overview-page.current{outline:3px solid #d18b35;outline-offset:-3px}
+#pageOverview .overview-page canvas{display:block;object-fit:contain;max-width:100%;max-height:95px;width:auto;height:auto}
+@media(max-width:1100px){#pageOverview #overviewGrid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:700px){#pageOverview #overviewGrid{grid-template-columns:repeat(4,minmax(0,1fr))}#pageOverview .overview-page{min-height:95px}#pageOverview .overview-page canvas{max-height:76px}}
+@media(max-width:420px){#pageOverview #overviewGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
