@@ -1,0 +1,179 @@
+/* v1.4.74: one-row top controls (~34px instead of 94px).
+   Keep all original event handlers and PDF data intact. */
+body>header,
+body>header.quick-toolbar-expanded{
+ display:flex!important;
+ flex-flow:row nowrap!important;
+ align-content:center!important;
+ align-items:center!important;
+ height:36px!important;
+ min-height:36px!important;
+ max-height:36px!important;
+ padding:1px 3px!important;
+ gap:3px!important;
+ overflow:visible!important;
+ position:sticky!important;
+ top:0!important;
+ z-index:100!important;
+ box-sizing:border-box!important;
+}
+body>header .brand{
+ order:0!important;
+ flex:0 0 auto!important;
+ width:auto!important;
+ min-width:0!important;
+ max-width:120px!important;
+ height:33px!important;
+ min-height:33px!important;
+ margin:0!important;
+ display:flex!important;
+}
+body>header .brand #quickToolbarTrigger{
+ display:inline-flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+ width:auto!important;
+ min-width:0!important;
+ max-width:120px!important;
+ height:32px!important;
+ min-height:32px!important;
+ padding:2px 6px!important;
+ border:1px solid #8bb9d0!important;
+ font:700 11px system-ui,sans-serif!important;
+ white-space:nowrap!important;
+ border-radius:4px!important;
+}
+#fixedPageNav,
+body>header.quick-toolbar-expanded #fixedPageNav{
+ order:1!important;
+ display:flex!important;
+ flex:1 1 auto!important;
+ width:auto!important;
+ max-width:none!important;
+ min-width:0!important;
+ height:34px!important;
+ min-height:34px!important;
+ max-height:34px!important;
+ flex-flow:row nowrap!important;
+ justify-content:flex-start!important;
+ align-items:center!important;
+ gap:2px!important;
+ padding:0!important;
+ margin:0!important;
+ overflow-x:auto!important;
+ overflow-y:hidden!important;
+ scrollbar-width:none!important;
+ scroll-behavior:smooth;
+}
+#fixedPageNav::-webkit-scrollbar{display:none}
+#fixedPageNav .fixed-page-controls{
+ display:flex!important;
+ align-items:center!important;
+ flex:0 0 auto!important;
+ gap:1px!important;
+}
+#fixedPageNav .fixed-page-controls button,
+#fixedPageNav #desktopZoomControls button,
+#fixedPageNav > :is(#visibleUndo,#panDrawing,#pageOverviewButton){
+ min-width:30px!important;
+ max-width:none!important;
+ width:auto!important;
+ height:32px!important;
+ min-height:32px!important;
+ max-height:32px!important;
+ padding:2px 5px!important;
+ margin:0!important;
+ font-size:15px!important;
+ line-height:1!important;
+ border-radius:4px!important;
+}
+#fixedPageNav #page{
+ min-width:43px!important;
+ height:auto!important;
+ padding:2px 3px!important;
+ font:700 10px system-ui,sans-serif!important;
+ white-space:nowrap!important;
+}
+#fixedPageNav #desktopZoomControls,
+body>header.quick-toolbar-expanded #fixedPageNav #desktopZoomControls{
+ order:3!important;
+ flex:0 0 auto!important;
+ display:flex!important;
+ align-items:center!important;
+ gap:1px!important;
+ margin-left:auto!important;
+ margin-right:0!important;
+ padding-left:3px!important;
+ position:sticky!important;
+ right:0!important;
+ z-index:4!important;
+ background:#102b3b!important;
+}
+#fixedPageNav #desktopZoomControls button{
+ width:31px!important;
+ min-width:31px!important;
+ max-width:31px!important;
+ font-size:19px!important;
+ padding:1px!important;
+}
+#fixedPageNav #unifiedToolbarExtras{
+ min-height:32px!important;
+ gap:2px!important;
+}
+body>header.quick-toolbar-expanded #fixedPageNav #unifiedToolbarExtras{
+ display:flex!important;
+}
+#fixedPageNav #unifiedToolbarExtras > :is(#workspaceAddPDF,.open,#save,#inputMethodToggle){
+ height:32px!important;
+ min-height:32px!important;
+ max-height:32px!important;
+ padding:2px 5px!important;
+ border-radius:4px!important;
+ font-size:11px!important;
+ line-height:1!important;
+}
+#fixedPageNav #unifiedToolbarExtras :is(.open,#save) span{
+ display:inline!important;
+ font-size:11px!important;
+ line-height:1!important;
+ white-space:nowrap!important;
+}
+#fixedPageNav #unifiedToolbarExtras :is(.open,#save) .ui-icon{
+ width:15px!important;height:15px!important;
+}
+#fixedPageNav #unifiedToolbarExtras #inputMethodToggle{
+ min-width:43px!important;
+ max-width:none!important;
+ padding:2px 5px!important;
+ font-size:0!important;
+}
+#fixedPageNav #unifiedToolbarExtras #inputMethodToggle::after{
+ content:"手動";
+ font:700 11px system-ui,sans-serif;
+}
+#fixedPageNav #unifiedToolbarExtras #inputMethodToggle[data-mode="pen"]::after{content:"ペン"}
+#fixedPageNav #unifiedToolbarExtras #workspaceAddPDF{
+ font-size:0!important;min-width:55px!important;padding:2px 5px!important;
+}
+#fixedPageNav #unifiedToolbarExtras #workspaceAddPDF::after{
+ content:"＋追加";font:700 11px system-ui,sans-serif;
+}
+#fixedPageNav #pageOverviewButton{
+ min-width:36px!important;
+ font-size:11px!important;
+}
+#fixedPageNav #panDrawing{min-width:33px!important;max-width:40px!important;font-size:0!important}
+#fixedPageNav #panDrawing::after{content:"✋"!important;display:inline!important;font-size:16px!important}
+#fixedPageNav #visibleUndo{font-size:19px!important;min-width:32px!important}
+#zoomHome{display:none!important}
+main>.workspace,body.continuous-mode main>.workspace{
+ height:calc(100dvh - 38px)!important;
+ min-height:0!important;
+}
+#surveyRailEdge{top:39px!important}
+@media(max-width:480px){
+ body>header .brand{max-width:75px!important}
+ body>header .brand #quickToolbarTrigger{max-width:75px!important;font-size:10px!important;padding:1px 3px!important}
+ #fixedPageNav .fixed-page-controls button{min-width:28px!important;padding:1px 3px!important}
+ #fixedPageNav #page{min-width:38px!important;font-size:10px!important}
+}
