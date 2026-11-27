@@ -25,7 +25,7 @@ function moveAnnotation(o,original,dx,dy){o.x=original.x+dx;o.y=original.y+dy;if
 
 // v1.4.62: non-destructive vertex/endpoint snapping for geometric annotations.
 // Never changes the underlying PDF or freehand/marker strokes.
-let vertexSnapEnabled=true,snapGuide=null;
+const vertexSnapEnabled=true;let snapGuide=null;
 function vertexSnapAnchors(o){
  if(!['arrow','rect','ellipse'].includes(o.type))return [];
  const b=bounds(o),cx=b.x+b.w/2,cy=b.y+b.h/2;
@@ -66,17 +66,8 @@ function snapTranslation(originals,dx,dy,exclude){
  if(best){snapGuide={...best.match};return {dx:best.dx,dy:best.dy}}
  return {dx,dy};
 }
-(function addVertexSnapToggle(){
- const tools=document.getElementById('tools');if(!tools)return;
- const button=document.createElement('button');button.type='button';button.id='vertexSnapToggle';
- button.setAttribute('aria-pressed','true');button.title='矢印・四角・円の端点や頂点を自動吸着';
- button.innerHTML='<span>端点スナップ ON</span>';
- button.onclick=()=>{vertexSnapEnabled=!vertexSnapEnabled;snapGuide=null;
-  button.setAttribute('aria-pressed',String(vertexSnapEnabled));
-  button.querySelector('span').textContent='端点スナップ '+(vertexSnapEnabled?'ON':'OFF');
-  say(vertexSnapEnabled?'端点・頂点を近づけると自動で吸着します。':'端点スナップを無効にしました。');draw()};
- tools.append(button);
-})();
+/* v1.4.76: endpoint snap stays always enabled; no UI toggle. */
+;
 
 const cache=new Map();function imageFor(src){if(!cache.has(src)){let im=new Image();im.onload=draw;im.src=src;cache.set(src,im)}return cache.get(src)}
 const textFonts={"gothic": "sans-serif", "mincho": "serif", "mono": "monospace", "yuGothic": "\"Yu Gothic\", \"YuGothic\", sans-serif", "meiryo": "\"Meiryo\", sans-serif", "msGothic": "\"MS Gothic\", monospace", "msPGothic": "\"MS PGothic\", sans-serif", "yuMincho": "\"Yu Mincho\", \"YuMincho\", serif", "msMincho": "\"MS Mincho\", serif", "msPMincho": "\"MS PMincho\", serif"};
@@ -155,6 +146,105 @@ function hitAnnotation(o,p){
  const first=o.points[0];return (p.x-first.x)**2+(p.y-first.y)**2<=radius2;
 }
 function topAnnotationAt(p){for(let i=list().length-1;i>=0;i--)if(hitAnnotation(list()[i],p))return i;return -1}
+/* v1.4.76: explicit freeform lasso multi-selection; no new annotation format.
+ * Capture on the original PDF overlay, only while user selects the lasso tool.
+ * Existing select/move, Shift selection, group move, delete and Undo remain.
+ */
+let lassoMode=false,lassoStroke=null;
+(function installLasso(){
+ const tools=document.getElementById('tools');if(!tools)return;
+ const button=document.createElement('button');
+ button.type='button';button.id='lassoSelectTool';button.className='lasso-tool';
+ button.title='投げ縄：囲んだ書き込みをまとめて選択。選択後は移動・削除できます。';
+ button.setAttribute('aria-label','投げ縄で一括選択');
+ button.setAttribute('aria-pressed','false');
+ button.innerHTML='<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke-dasharray="3 3" d="M4 11c0-7 13-9 16-2s-8 11-14 7c-3-2-3-5-1-7"/><path d="m5 17 0 4 4-2"/></svg><span>投げ縄</span>';
+ const selectTool=tools.querySelector('[data-tool="select"]');
+ if(selectTool)selectTool.after(button);else tools.prepend(button);
+ const setMode=on=>{
+   lassoMode=Boolean(on);lassoStroke=null;
+   button.classList.toggle('active',lassoMode);
+   button.setAttribute('aria-pressed',String(lassoMode));
+   canvas.style.cursor=lassoMode?'crosshair':'';
+   if(lassoMode){
+     setTool('select',false);
+     if(typeof setTouchMode==='function')setTouchMode('edit',false);
+     button.classList.add('active');
+     button.setAttribute('aria-pressed','true');
+   }
+ };
+ button.addEventListener('click',()=>{setMode(!lassoMode);if(lassoMode)say('囲みたい書き込みの周囲をなぞってください。')});
+ tools.addEventListener('click',e=>{
+  if(e.target.closest('button[data-tool],#surveyPalettePin,#instructionPinPalette')&&!e.target.closest('#lassoSelectTool'))setMode(false);
+ },true);
+ function inside(p,poly){
+  let odd=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+   const a=poly[i],b=poly[j];
+   if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)odd=!odd;
+  }
+  return odd;
+ }
+ function linesCross(a,b,c,d){
+   const dir=(u,v,w)=>(v.x-u.x)*(w.y-u.y)-(v.y-u.y)*(w.x-u.x);
+   const ab1=dir(a,b,c),ab2=dir(a,b,d),cd1=dir(c,d,a),cd2=dir(c,d,b);
+   return ((ab1>0&&ab2<0)||(ab1<0&&ab2>0))&&((cd1>0&&cd2<0)||(cd1<0&&cd2>0));
+ }
+ function intersects(o,poly){
+  const b=bounds(o),x=b.x,y=b.y,w=b.w,h=b.h;
+  if(![x,y,w,h].every(Number.isFinite))return false;
+  const c=[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h}];
+  const mid={x:x+w/2,y:y+h/2};
+  if(c.some(p=>inside(p,poly))||inside(mid,poly)||poly.some(p=>p.x>=x&&p.x<=x+w&&p.y>=y&&p.y<=y+h))return true;
+  for(let i=0;i<poly.length;i++)for(let j=0;j<4;j++){
+   if(linesCross(poly[i],poly[(i+1)%poly.length],c[j],c[(j+1)%4]))return true;
+  }
+  return false;
+ }
+ function preview(){
+  draw();
+  if(!lassoStroke||lassoStroke.points.length<2)return;
+  ctx.save();ctx.scale(scale,scale);applyPageTurn(ctx,pageEntries[page-1]);
+  ctx.beginPath();ctx.moveTo(lassoStroke.points[0].x,lassoStroke.points[0].y);
+  for(const p of lassoStroke.points.slice(1))ctx.lineTo(p.x,p.y);
+  ctx.setLineDash([6/Math.max(scale,.1),4/Math.max(scale,.1)]);
+  ctx.lineWidth=2/Math.max(scale,.1);
+  ctx.strokeStyle='#1685bd';ctx.fillStyle='#40a5dc22';
+  ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+ }
+ canvas.addEventListener('pointerdown',e=>{
+  if(!lassoMode||!doc||rendering||pageBusy||e.button!==0)return;
+  lassoStroke={id:e.pointerId,points:[point(e)]};
+  try{canvas.setPointerCapture(e.pointerId)}catch{}
+  e.preventDefault();e.stopImmediatePropagation();preview();
+ },true);
+ canvas.addEventListener('pointermove',e=>{
+  if(!lassoStroke||e.pointerId!==lassoStroke.id)return;
+  const p=point(e),a=lassoStroke.points.at(-1);
+  if(Math.hypot(p.x-a.x,p.y-a.y)>1/Math.max(scale,.1)){
+   lassoStroke.points.push(p);preview();
+  }
+  e.preventDefault();e.stopImmediatePropagation();
+ },true);
+ function finishLasso(e){
+  if(!lassoStroke||e.pointerId!==lassoStroke.id)return;
+  const poly=lassoStroke.points;lassoStroke=null;
+  if(poly.length>2&&doc){
+   const chosen=[];
+   for(let i=0;i<list().length;i++)if(intersects(list()[i],poly))chosen.push(i);
+   selectIndices(chosen);syncEditor();
+   say(chosen.length+'件を選択しました。移動・削除するには「選択」を押してください。');
+  }
+  setMode(false);draw();
+  e.preventDefault();e.stopImmediatePropagation();
+ }
+ canvas.addEventListener('pointerup',finishLasso,true);
+ canvas.addEventListener('pointercancel',e=>{
+  if(!lassoStroke||e.pointerId!==lassoStroke.id)return;
+  lassoStroke=null;setMode(false);draw();e.preventDefault();e.stopImmediatePropagation();
+ },true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lassoMode){setMode(false);draw()}});
+})();
 canvas.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;if(!doc||rendering||pageBusy)return;dragSnapshotTaken=false;start=point(e);canvas.setPointerCapture(e.pointerId);if(tool==='text'){const hit=topAnnotationAt(start);if(hit>=0&&list()[hit].type==='text')setTool('select',false)}if(tool==='select'){const before=selectionIndices(),hit=topAnnotationAt(start),extend=e.shiftKey||window.multiSelectTouch;dragGroup=null;dragHandle=!extend&&before.length===1&&selected>=0?hitHandle(list()[selected],start):null;if(dragHandle){working=JSON.parse(JSON.stringify(list()[selected]));draw();return}if(extend){const next=new Set(before);if(hit>=0){if(next.has(hit))next.delete(hit);else next.add(hit)}selectIndices([...next]);start=null;working=null;syncEditor();draw();return}if(hit<0)selectIndices([]);else if(!before.includes(hit))selectIndices([hit]);else selected=hit;if(selected>=0){working=JSON.parse(JSON.stringify(list()[selected]));if(selectionIndices().length>1)dragGroup=selectionIndices().map(i=>({i,original:JSON.parse(JSON.stringify(list()[i]))}))}syncEditor();draw();return}if(tool==='stamp'&&stampPreset){snapshot();const o={type:'stamp',x:start.x-stampPreset.w/2,y:start.y-(stampPreset.shape==='instruction-pin'?stampPreset.h:stampPreset.h/2),...stampPreset,color:currentColor};list().push(o);start=null;setTool('select',false);selectIndices([list().length-1]);syncEditor();draw();return}if(tool==='text'){const t=$('text').value;if(!t.trim()){say('文字入力欄に、追加する文字を入力してください。');return}snapshot();list().push({type:tool,x:start.x,y:start.y,text:t,size:currentTextSize,...textStyleControls('text'),color:currentColor});selected=-1;draw();return}if(tool==='image'&&!imgSource)return;if(['arrow','rect','ellipse'].includes(tool))start=snapVertexPoint(start);working={type:tool==='highlight'?'pen':tool,x:start.x,y:start.y,w:0,h:0,color:currentColor,src:tool==='image'?imgSource:undefined,points:tool==='pen'||tool==='highlight'?[start]:undefined,...(tool==='pen'?{lineWidth:1}:tool==='highlight'?{lineWidth:markerWidth,opacity:.3,markerStroke:true}:{})};selected=-1};
 canvas.onpointermove=e=>{if(!working||!start){if(tool==='select'&&selected>=0){const h=hitHandle(list()[selected],point(e));canvas.style.cursor=h?(h.key==='nw'||h.key==='se'?'nwse-resize':h.key==='ne'||h.key==='sw'?'nesw-resize':h.key==='rotate'?'grab':'crosshair'):'move'}return;}const p=point(e),dx=p.x-start.x,dy=p.y-start.y;if(tool==='select'){if(!dragSnapshotTaken){if(dx===0&&dy===0)return;snapshot();dragSnapshotTaken=true}if(dragGroup){const snapped=snapTranslation(dragGroup.map(g=>g.original),dx,dy,selectionIndices());for(const {i,original}of dragGroup)moveAnnotation(list()[i],original,snapped.dx,snapped.dy);draw();return}const o=list()[selected];if(dragHandle){if(dragHandle.key==='rotate'){const b=bounds(working),cx=b.x+b.w/2,cy=b.y+b.h/2;o.rotation=(working.rotation||0)+(Math.atan2(p.y-cy,p.x-cx)-Math.atan2(start.y-cy,start.x-cx))*180/Math.PI}else resizeAnnotation(o,working,dragHandle,vertexSnapEnabled&&!(working.rotation||0)&&['arrow','rect','ellipse'].includes(working.type)?snapVertexPoint(p,selectionIndices()):p);draw();return}const snapped=snapTranslation([working],dx,dy,selectionIndices());o.x=working.x+snapped.dx;o.y=working.y+snapped.dy;if(o.type==='pen')o.points=working.points.map(v=>({x:v.x+dx,y:v.y+dy}))}else if(tool==='pen'||tool==='highlight')working.points.push(p);else{const end=['arrow','rect','ellipse'].includes(tool)?snapVertexPoint(p):p;working.w=end.x-start.x;working.h=end.y-start.y}draw()};
 /* v1.4.75: Snap ONLY a sufficiently straight completed freehand/marker
