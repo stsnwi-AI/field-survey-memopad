@@ -1,0 +1,29 @@
+/* v1.4.76: draggable LEFT rail heading (Y only); original auto-hide intact. */
+#surveyToolDock.dock-left .dock-title{
+ cursor:ns-resize!important;touch-action:none!important;
+ user-select:none!important;-webkit-user-select:none!important;
+ background:#d8e9f1!important;
+ border:1px solid #8baebf!important;border-radius:5px!important;
+ padding:5px 2px!important;
+}
+#surveyToolDock.dock-left .dock-title::before{
+ content:"↕ ";font-size:14px;font-weight:900;
+}
+#surveyToolDock.dock-left #lassoSelectTool{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ position:relative!important;
+}
+#surveyToolDock.dock-left #lassoSelectTool[aria-pressed="true"]{
+ background:#d5edfb!important;color:#005f92!important;
+ border:2px solid #187eb4!important;
+}
+#surveyToolDock.dock-left #vertexSnapToggle{display:none!important}
+/* Readable, bold undo, still uses the unchanged undo handler. */
+#fixedPageNav #visibleUndo{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ color:#ffffff!important;background:#166c9b!important;
+ border:1px solid #9fd4ef!important;border-radius:5px!important;
+ padding:2px 4px!important;width:36px!important;min-width:36px!important;
+ height:32px!important;min-height:32px!important;
+}
+#fixedPageNav #visibleUndo svg{width:25px!important;height:25px!important;flex:0 0 25px!important}
