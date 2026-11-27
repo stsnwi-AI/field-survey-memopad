@@ -27,6 +27,11 @@ function moveAnnotation(o,original,dx,dy){o.x=original.x+dx;o.y=original.y+dy;if
 // Never changes the underlying PDF or freehand/marker strokes.
 const vertexSnapEnabled=true;let snapGuide=null;
 function vertexSnapAnchors(o){
+ // A newly auto-straightened marker or pen remains type 'pen' (old PDF
+ // format), but its two endpoints now participate in vertex snapping.
+ if(o.type==='pen'&&o.straightened===true&&Array.isArray(o.points)&&o.points.length===2){
+  return o.points.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)).map(p=>({x:p.x,y:p.y}));
+ }
  if(!['arrow','rect','ellipse'].includes(o.type))return [];
  const b=bounds(o),cx=b.x+b.w/2,cy=b.y+b.h/2;
  const radians=(o.rotation||0)*Math.PI/180;
@@ -254,23 +259,42 @@ function straightenCompletedStroke(o){
  if(o?.type!=='pen'||!Array.isArray(o.points)||o.points.length<2)return;
  const pts=o.points.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y));
  if(pts.length<2)return;
- const first=pts[0],last=pts[pts.length-1],dx=last.x-first.x,dy=last.y-first.y;
- const length=Math.hypot(dx,dy);
- if(length<18/Math.max(scale,.25))return;
+ const first=pts[0],last=pts[pts.length-1];
+ const dx=last.x-first.x,dy=last.y-first.y,length=Math.hypot(dx,dy);
+ const z=Math.max(.25,scale);
+ // Short marks, circles, deliberate corners and returns remain freehand.
+ if(length<14/z)return;
  const ux=dx/length,uy=dy/length;
- // A reversed stroke or sharp bend is not a straight stroke.
- const tolerance=Math.min(4/Math.max(scale,.25),Math.max(1.6/Math.max(scale,.25),length*.025));
- let previous=-Infinity,backtrack=0;
- for(const p of pts){
-  const px=p.x-first.x,py=p.y-first.y;
-  const along=px*ux+py*uy;
-  const deviation=Math.abs(px*uy-py*ux);
-  if(deviation>tolerance)return;
-  if(along<previous-2/Math.max(scale,.25))backtrack+=previous-along;
-  previous=along;
+ // More forgiving than v1.4.75 for small hand tremor / waviness.
+ // Combine peak error, overall RMS, travel and reversal checks.
+ const peakLimit=Math.min(18/z,Math.max(7/z,length*.10));
+ const rmsLimit=Math.min(9/z,Math.max(3.5/z,length*.055));
+ let maxDeviation=0,sumSquared=0,travel=0,reversals=0,prevProjection=0;
+ let previous=pts[0];
+ for(let i=0;i<pts.length;i++){
+  const p=pts[i],vx=p.x-first.x,vy=p.y-first.y;
+  const along=vx*ux+vy*uy,deviation=Math.abs(vx*uy-vy*ux);
+  maxDeviation=Math.max(maxDeviation,deviation);
+  sumSquared+=deviation*deviation;
+  if(i){
+   travel+=Math.hypot(p.x-previous.x,p.y-previous.y);
+   if(along<prevProjection-1.5/z)reversals+=prevProjection-along;
+  }
+  prevProjection=along;previous=p;
  }
- if(backtrack>Math.max(3/Math.max(scale,.25),length*.035))return;
- o.points=[{x:first.x,y:first.y},{x:last.x,y:last.y}];
+ const rms=Math.sqrt(sumSquared/pts.length);
+ if(maxDeviation>peakLimit||rms>rmsLimit||travel>length*1.55||reversals>length*.12)return;
+ // The original object is not converted to an arrow: marker color, opacity,
+ // width, rounded cap, editing and embedded-PDF schema remain unchanged.
+ // Snap both new endpoints independently to nearby existing geometry.
+ // These anchors are also used when later moving a straightened line.
+ const targets=snapCandidates();
+ const radius=14/z;
+ const a=closestSnap(first,targets,radius)||first;
+ const b=closestSnap(last,targets,radius)||last;
+ if(Math.hypot(b.x-a.x,b.y-a.y)<8/z)return;
+ o.points=[{x:a.x,y:a.y},{x:b.x,y:b.y}];
+ o.straightened=true;
 }
 function finish(){if(working&&tool!=='select'){if(tool==='pen'||tool==='highlight'||Math.abs(working.w)>3&&Math.abs(working.h)>3||tool==='arrow'&&Math.hypot(working.w,working.h)>3){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}if(tool==='pen'||tool==='highlight')straightenCompletedStroke(working);snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
 $('undo').onclick=()=>travelHistory(false);$('delete').onclick=removeSelectedObjects;
