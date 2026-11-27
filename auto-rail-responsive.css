@@ -1,0 +1,91 @@
+/* v1.4.69 cross-device corrections: left-edge auto rail and uncut responsive header.
+   Kept separate from PDF data/annotation logic. */
+#surveyRailEdge{
+ position:fixed;z-index:69;left:0;top:52px;bottom:12px;width:18px;
+ border:0;background:linear-gradient(90deg,#3383a250,transparent);
+ cursor:pointer;touch-action:manipulation;
+}
+#surveyRailEdge:focus-visible{outline:3px solid #f1a63d;outline-offset:-3px}
+#surveyToolDock.dock-left{
+ transform:translateX(calc(-100% - 4px))!important;
+ transition:transform .16s ease-out!important;
+ pointer-events:none!important;
+ z-index:70!important;
+}
+#surveyToolDock.dock-left.auto-rail-open{
+ transform:translateX(0)!important;pointer-events:auto!important;
+}
+#surveyToolDock.dock-left #dockMode{display:none!important}
+#surveyToolDock.dock-left .dock-title{pointer-events:auto!important}
+body>header .brand{display:flex!important;visibility:visible!important;align-items:center!important}
+body>header .brand #quickToolbarTrigger{
+ display:inline-flex!important;visibility:visible!important;
+ min-height:38px!important;
+}
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #pageOverviewButton,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #visibleUndo,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #panDrawing,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #workspaceAddPDF{display:none!important}
+#fixedPageNav{overflow:visible!important;min-width:0!important}
+#fixedPageNav .fixed-page-controls{order:0!important;display:flex!important;flex:0 0 auto!important}
+#fixedPageNav #desktopZoomControls{order:1!important;display:flex!important;flex:0 0 auto!important}
+#fixedPageNav #desktopZoomControls button{
+ display:inline-flex!important;opacity:1!important;visibility:visible!important;
+ min-width:40px!important;width:40px!important;max-width:40px!important;
+ min-height:40px!important;height:40px!important;
+}
+body>header.quick-toolbar-expanded #fixedPageNav{overflow:visible!important}
+body>header.quick-toolbar-expanded #showSurveyTools{display:none!important}
+/* Tablet and phone: two stable rows rather than cropping the brand or hiding page controls.
+   Long secondary commands wrap below these rows only while expanded. */
+@media(max-width:800px),(pointer:coarse){
+ body>header{
+  height:92px!important;min-height:92px!important;
+  display:flex!important;flex-flow:row wrap!important;
+  align-content:flex-start!important;align-items:center!important;
+  padding:4px 5px!important;gap:3px!important;overflow:visible!important;
+ }
+ body>header .brand{
+  display:flex!important;flex:1 0 100%!important;width:100%!important;
+  min-height:38px!important;height:38px!important;margin:0!important;
+ }
+ body>header .brand #quickToolbarTrigger{
+  width:auto!important;min-width:165px!important;max-width:100%!important;
+  height:37px!important;min-height:37px!important;
+  font-size:12px!important;white-space:nowrap!important;
+ }
+ #fixedPageNav{
+  display:flex!important;flex:1 0 100%!important;order:1!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  height:42px!important;min-height:42px!important;gap:4px!important;
+  justify-content:flex-start!important;align-items:center!important;
+  flex-flow:row nowrap!important;
+ }
+ #fixedPageNav .fixed-page-controls{display:flex!important;gap:2px!important}
+ #fixedPageNav .fixed-page-controls button{min-width:36px!important;width:36px!important;max-width:36px!important;min-height:40px!important}
+ #fixedPageNav #page{display:inline-block!important;min-width:58px!important;font-size:12px!important}
+ #fixedPageNav #desktopZoomControls{display:flex!important;gap:4px!important}
+ #fixedPageNav #desktopZoomControls button{width:40px!important;min-width:40px!important;max-width:40px!important}
+ body>header.quick-toolbar-expanded{
+  height:auto!important;min-height:92px!important;max-height:min(75dvh,560px)!important;
+  overflow-y:auto!important;align-content:flex-start!important;
+  flex-wrap:wrap!important;position:relative!important;
+ }
+ body>header.quick-toolbar-expanded #fixedPageNav{
+  order:1!important;flex:1 0 100%!important;width:100%!important;
+  height:auto!important;min-height:42px!important;max-height:none!important;
+  flex-flow:row wrap!important;justify-content:flex-start!important;
+ }
+ body>header.quick-toolbar-expanded > .open,
+ body>header.quick-toolbar-expanded > #save,
+ body>header.quick-toolbar-expanded > #inputMethodToggle{order:2!important}
+ main>.workspace{height:calc(100dvh - 94px)!important;min-height:0!important}
+ body.continuous-mode main>.workspace{height:calc(100dvh - 94px)!important}
+ #surveyRailEdge{top:94px!important}
+}
+@media(max-width:380px){
+ #fixedPageNav .fixed-page-controls button{width:33px!important;min-width:33px!important;max-width:33px!important}
+ #fixedPageNav #page{min-width:48px!important;font-size:11px!important}
+ #fixedPageNav #desktopZoomControls button{width:37px!important;min-width:37px!important;max-width:37px!important}
+}
+@media(hover:none){#surveyRailEdge{background:linear-gradient(90deg,#3383a260,transparent)}}
