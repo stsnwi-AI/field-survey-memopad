@@ -1,0 +1,35 @@
+/* v1.4.70: tablet-safe, visible 42px left-edge reveal tab. */
+#surveyRailEdge{
+ left:0!important;
+ top:max(98px,env(safe-area-inset-top))!important;
+ bottom:14px!important;
+ width:42px!important;
+ z-index:75!important;
+ touch-action:manipulation!important;
+ background:transparent!important;
+ cursor:pointer!important;
+}
+#surveyRailEdge::before{
+ content:"❯";position:absolute;top:34%;left:0;
+ display:flex;align-items:center;justify-content:center;
+ width:26px;height:74px;
+ border-radius:0 9px 9px 0;
+ border:1px solid #7ca5b8;
+ background:#194d68e8;color:#fff;
+ box-shadow:2px 2px 7px #123b4a33;
+ font:700 18px system-ui;
+}
+#surveyRailEdge[aria-expanded="true"]{pointer-events:none!important}
+#surveyRailEdge[aria-expanded="true"]::before{opacity:0}
+#surveyToolDock.dock-left.auto-rail-open{
+ z-index:80!important;
+ visibility:visible!important;
+ transform:translateX(0)!important;
+ pointer-events:auto!important;
+}
+#surveyToolDock.dock-left:not(.auto-rail-open){
+ visibility:hidden!important;pointer-events:none!important;
+}
+@media(min-width:801px) and (pointer:fine){
+ #surveyRailEdge{top:52px!important;width:36px!important}
+}
