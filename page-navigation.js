@@ -26,7 +26,7 @@
   bar.append(zoomHome);
   strip.append(pageControls,move);
   const editablePageStatus=document.createElement('output');editablePageStatus.id='editablePageStatus';editablePageStatus.hidden=true;editablePageStatus.setAttribute('aria-live','polite');editablePageStatus.style.cssText='font:600 11px system-ui,sans-serif;padding:4px 6px;border-radius:5px;background:#e5f3f1;color:#145648;white-space:nowrap;';strip.append(editablePageStatus);editablePageStatus.hidden=true;
-  const visibleUndo=document.createElement('button');visibleUndo.type='button';visibleUndo.id='visibleUndo';visibleUndo.textContent='↶';visibleUndo.title='元に戻す（直前の編集・削除を取り消す）';visibleUndo.setAttribute('aria-label','操作を元に戻す');visibleUndo.onclick=()=>document.getElementById('undo')?.click();strip.append(visibleUndo);
+  const visibleUndo=document.createElement('button');visibleUndo.type='button';visibleUndo.id='visibleUndo';visibleUndo.textContent='↶';visibleUndo.title='元に戻す';visibleUndo.setAttribute('aria-label','操作を元に戻す');visibleUndo.onclick=()=>document.getElementById('undo')?.click();strip.append(visibleUndo);
   // Always-visible desktop mouse zoom; share the existing zoom/select render path.
   const desktopZoom=document.createElement('div');
   desktopZoom.id='desktopZoomControls';
@@ -70,7 +70,7 @@
   if(brand){
     const trigger=document.createElement('button');
     trigger.type='button';trigger.id='quickToolbarTrigger';
-    trigger.textContent='現場調査メモパッド ☰ メニュー';
+    trigger.textContent='現場メモ ☰';
     trigger.title='メニューを開いて操作ボタンを表示・もう一度押すと閉じる';
     trigger.setAttribute('aria-expanded','false');
     trigger.setAttribute('aria-controls','fixedPageNav');
@@ -80,7 +80,7 @@
     const setOpen=open=>{
       header.classList.toggle('quick-toolbar-expanded',Boolean(open));
       trigger.setAttribute('aria-expanded',String(Boolean(open)));
-      trigger.textContent=open?'現場調査メモパッド ▲ 閉じる':'現場調査メモパッド ☰ メニュー';
+      trigger.textContent=open?'現場メモ ▲':'現場メモ ☰';
     };
     trigger.addEventListener('click',()=>setOpen(!header.classList.contains('quick-toolbar-expanded')));
     document.addEventListener('keydown',e=>{
@@ -91,7 +91,7 @@
   }
   const addPDF=document.createElement('button');
   addPDF.type='button';addPDF.id='workspaceAddPDF';
-  addPDF.textContent='＋ PDF追加';
+  addPDF.textContent='＋ 追加';
   addPDF.title='PDFを別タブに追加';
   addPDF.onclick=()=>{
     try{
