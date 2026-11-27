@@ -1,0 +1,42 @@
+/* v1.4.75: overview to the RIGHT of zoom, gentle palette tool captions,
+ * suppress native blue long-press selection on non-editable surfaces. */
+#desktopZoomControls #pageOverviewButton{
+ display:inline-flex!important;visibility:visible!important;
+ position:static!important;order:5!important;
+ align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;
+ height:32px!important;min-height:32px!important;max-height:32px!important;
+ width:auto!important;min-width:42px!important;max-width:none!important;
+ padding:2px 5px!important;margin-left:3px!important;
+ font:700 11px system-ui,sans-serif!important;
+ color:#f8fcff!important;background:#315c74!important;
+ border:1px solid #9db9c9!important;border-radius:4px!important;
+}
+body>header:not(.quick-toolbar-expanded) #desktopZoomControls #pageOverviewButton,
+body>header.quick-toolbar-expanded #desktopZoomControls #pageOverviewButton{display:inline-flex!important}
+#paletteToolHint{
+ position:fixed;z-index:220;pointer-events:none;
+ background:rgba(18,51,70,.82);color:#fff;
+ border:1px solid rgba(255,255,255,.4);
+ border-radius:6px;padding:6px 9px;
+ font:700 12px system-ui,"Yu Gothic",sans-serif;
+ white-space:nowrap;max-width:180px;
+ box-shadow:0 3px 9px #102b3b33;
+}
+#paletteToolHint[hidden]{display:none!important}
+#surveyToolDock,#surveyToolDock button,
+#surveyRailEdge,#fixedPageNav,#fixedPageNav button,
+body>header,body>header button,.workspace canvas,#overlay{
+ -webkit-user-select:none!important;
+ user-select:none!important;
+ -webkit-touch-callout:none!important;
+}
+#surveyToolDock button,#fixedPageNav button,body>header button{
+ -webkit-tap-highlight-color:transparent!important;
+}
+/* Keep text selection, copy/paste and caret in genuine editable inputs. */
+#dockEditSettings :is(input,textarea,[contenteditable="true"]),
+#surveyToolDock :is(input,textarea,[contenteditable="true"]){
+ -webkit-user-select:text!important;user-select:text!important;
+ -webkit-touch-callout:default!important;
+}
