@@ -240,8 +240,63 @@
     dockTitle.addEventListener('pointercancel',stop);
     dockTitle.addEventListener('lostpointercapture',stop);
   }
-  // Default to the movable palette without waiting for a separate editing-mode switch.
-  setMode(true);
+  // v1.4.69: Left-edge auto-reveal on mouse, finger and stylus.
+  // No toolbar-mode switch is needed. Retain original tool elements and handlers.
+  pin.hidden=true;
+  const edge=document.createElement('div');
+  edge.id='surveyRailEdge';
+  edge.setAttribute('role','button');
+  edge.setAttribute('tabindex','0');
+  edge.setAttribute('aria-label','左端に触れると書き込みパレットを表示');
+  edge.title='左端に触れて書き込みパレットを表示';
+  document.body.append(edge);
+  let idleTimer=null;
+  let pointerInside=false;
+  function hideRail(){
+    if(pointerInside || dock.contains(document.activeElement) ||
+       document.getElementById('dockEditSettings')?.open){
+      scheduleHide();return;
+    }
+    dock.classList.remove('auto-rail-open');
+  }
+  function scheduleHide(){
+    clearTimeout(idleTimer);
+    idleTimer=setTimeout(hideRail,2800);
+  }
+  function revealRail(){
+    if(dock.classList.contains('dock-collapsed'))setDockVisible(true);
+    dock.classList.add('auto-rail-open');
+    scheduleHide();
+  }
+  edge.addEventListener('pointerenter',revealRail);
+  edge.addEventListener('pointerdown',revealRail);
+  edge.addEventListener('focus',revealRail);
+  edge.addEventListener('keydown',e=>{
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();revealRail();}
+  });
+  dock.addEventListener('pointerenter',()=>{pointerInside=true;revealRail()});
+  dock.addEventListener('pointerleave',()=>{pointerInside=false;scheduleHide()});
+  dock.addEventListener('pointerdown',revealRail);
+  dock.addEventListener('click',revealRail);
+  dock.addEventListener('focusin',revealRail);
+  dock.addEventListener('focusout',()=>{pointerInside=false;scheduleHide()});
+  document.addEventListener('pointermove',e=>{
+    if(e.pointerType==='mouse'&&e.clientX<=18&&e.clientY>=headerBottom())revealRail();
+  },{passive:true});
+  // One tap at the edge reveals the palette without consuming the PDF pointer.
+  // Outside touches only close an already idle palette, never alter annotations.
+  document.addEventListener('pointerdown',e=>{
+    if(!dock.contains(e.target)&&!edge.contains(e.target)&&e.clientX>24){
+      pointerInside=false;scheduleHide();
+    }
+  },true);
+  setMode(false);
+  dock.classList.remove('auto-rail-open');
+  // Only the edge sensor is visible until touched; tool actions remain intact.
+  window.addEventListener('blur',()=>{
+    pointerInside=false;clearTimeout(idleTimer);
+    dock.classList.remove('auto-rail-open');
+  });
   window.addEventListener('resize', () => {
     if (!floating) { dock.style.top = headerBottom() + 'px'; return; }
     const rect=dock.getBoundingClientRect();
