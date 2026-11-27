@@ -1,0 +1,49 @@
+/* v1.4.77 - Improve overview discoverability without increasing toolbar height.
+   PDF rendering and editing are unchanged. */
+#fixedPageNav #desktopZoomControls{
+ gap:2px!important;
+ padding-left:5px!important;
+ padding-right:8px!important;
+ box-shadow:-4px 0 9px #102b3b88!important;
+}
+#fixedPageNav #desktopZoomControls #pageOverviewButton{
+ order:3!important;
+ display:inline-flex!important;
+ visibility:visible!important;
+ align-items:center!important;
+ justify-content:center!important;
+ flex:0 0 auto!important;
+ position:relative!important;
+ box-sizing:border-box!important;
+ width:auto!important;
+ min-width:68px!important;
+ max-width:none!important;
+ height:32px!important;
+ min-height:32px!important;
+ max-height:32px!important;
+ margin:0 2px 0 12px!important;
+ padding:3px 10px!important;
+ background:#e4f2ff!important;
+ color:#123e56!important;
+ border:2px solid #7eb1d1!important;
+ border-radius:6px!important;
+ box-shadow:0 1px 3px #061b2966!important;
+ font:800 12px/1 system-ui,sans-serif!important;
+ white-space:nowrap!important;
+ touch-action:manipulation!important;
+}
+#fixedPageNav #desktopZoomControls #pageOverviewButton::before{
+ content:"";position:absolute;left:-9px;top:5px;bottom:5px;
+ width:1px;background:#94b5c7;pointer-events:none;
+}
+#fixedPageNav #desktopZoomControls #pageOverviewButton:focus-visible{
+ outline:2px solid #ffd76a!important;outline-offset:1px!important;
+}
+@media(max-width:480px){
+ #fixedPageNav #desktopZoomControls{padding-right:5px!important}
+ #fixedPageNav #desktopZoomControls #pageOverviewButton{
+  min-width:62px!important;margin-left:8px!important;
+  padding:3px 6px!important;font-size:11px!important;
+ }
+ #fixedPageNav #desktopZoomControls #pageOverviewButton::before{left:-6px}
+}
