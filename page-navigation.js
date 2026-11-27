@@ -59,7 +59,7 @@
   minus.onclick=()=>changeZoom(-.25);
   plus.onclick=()=>changeZoom(.25);
   desktopZoom.append(minus,percentage,plus);
-  strip.insertBefore(desktopZoom,move);
+  strip.append(desktopZoom);
   zoom.addEventListener('change',syncZoom);
   syncZoom();
   header.querySelector('.brand')?.after(strip);
@@ -70,50 +70,23 @@
   if(brand){
     const trigger=document.createElement('button');
     trigger.type='button';trigger.id='quickToolbarTrigger';
-    trigger.textContent='現場調査メモパッド ▾';
-    trigger.title='押している間は操作アイコンを表示。指を滑らせて離すと選択できます。';
+    trigger.textContent='現場調査メモパッド ☰ メニュー';
+    trigger.title='メニューを開いて操作ボタンを表示・もう一度押すと閉じる';
     trigger.setAttribute('aria-expanded','false');
     trigger.setAttribute('aria-controls','fixedPageNav');
     brand.append(trigger);
-    let hold=null,suppressTitleClick=false;
+    // A tap must leave the controls usable: the old pointer-capture logic
+    // closed them on touch release, before users could press an action.
     const setOpen=open=>{
       header.classList.toggle('quick-toolbar-expanded',Boolean(open));
       trigger.setAttribute('aria-expanded',String(Boolean(open)));
+      trigger.textContent=open?'現場調査メモパッド ▲ 閉じる':'現場調査メモパッド ☰ メニュー';
     };
-    trigger.addEventListener('pointerdown',e=>{
-      if(e.button!==undefined&&e.button!==0)return;
-      if(e.pointerType==='touch'||e.pointerType==='pen'){
-        hold=e.pointerId;setOpen(true);
-        try{trigger.setPointerCapture(e.pointerId)}catch{}
-        e.preventDefault();
-      }
-    });
-    trigger.addEventListener('pointerup',e=>{
-      if(hold!==e.pointerId)return;
-      const target=document.elementFromPoint(e.clientX,e.clientY);
-      const command=target?.closest('button,label,a');
-      hold=null;suppressTitleClick=true;
-      // Reuse the genuine existing controls, not replacement PDF operations.
-      if(command&&command!==trigger&&header.contains(command)){
-        if(command.tagName==='LABEL'){
-          const input=command.querySelector('input[type=file]');
-          if(input)input.click();else command.click();
-        }else command.click();
-      }
-      setOpen(false);
-      e.preventDefault();
-    });
-    trigger.addEventListener('pointercancel',()=>{hold=null;setOpen(false)});
-    trigger.addEventListener('click',e=>{
-      if(suppressTitleClick){suppressTitleClick=false;e.preventDefault();return}
-      // Mouse and keyboard can pin the commands open until outside click.
-      setOpen(!header.classList.contains('quick-toolbar-expanded'));
-    });
-    document.addEventListener('pointerdown',e=>{
-      if(!header.contains(e.target))setOpen(false);
-    },true);
+    trigger.addEventListener('click',()=>setOpen(!header.classList.contains('quick-toolbar-expanded')));
     document.addEventListener('keydown',e=>{
-      if(e.key==='Escape')setOpen(false);
+      if(e.key==='Escape'&&header.classList.contains('quick-toolbar-expanded')){
+        setOpen(false);trigger.focus();
+      }
     });
   }
   const addPDF=document.createElement('button');
