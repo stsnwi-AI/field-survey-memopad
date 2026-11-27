@@ -70,9 +70,9 @@
   if(brand){
     const trigger=document.createElement('button');
     trigger.type='button';trigger.id='quickToolbarTrigger';
-    trigger.textContent='現場メモ ☰';
+    trigger.textContent='現場メモ ▲';
     trigger.title='メニューを開いて操作ボタンを表示・もう一度押すと閉じる';
-    trigger.setAttribute('aria-expanded','false');
+    trigger.setAttribute('aria-expanded','true');
     trigger.setAttribute('aria-controls','fixedPageNav');
     brand.append(trigger);
     // A tap must leave the controls usable: the old pointer-capture logic
@@ -82,6 +82,7 @@
       trigger.setAttribute('aria-expanded',String(Boolean(open)));
       trigger.textContent=open?'現場メモ ▲':'現場メモ ☰';
     };
+    setOpen(true);
     trigger.addEventListener('click',()=>setOpen(!header.classList.contains('quick-toolbar-expanded')));
     document.addEventListener('keydown',e=>{
       if(e.key==='Escape'&&header.classList.contains('quick-toolbar-expanded')){
