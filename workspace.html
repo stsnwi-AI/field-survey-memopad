@@ -78,8 +78,11 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
  .home-welcome .first-file{width:100%;justify-content:center}
  .home-welcome .welcome-features span{font-size:11px;padding:7px 9px}
 }
+/* Once a PDF is open, PDF addition is available inside its editor icon row. */
+body:has(.document-frame.active) > header{display:none!important}
+body:has(.document-frame.active) > #workspace{flex:1 1 auto!important;min-height:0!important}
 </style></head><body>
-<header><div><strong>現場調査メモパッド｜PDF編集</strong><small> Ver.1.4.67-dev ／図面ごとに編集状態を保持</small></div>
+<header><div><strong>現場調査メモパッド｜PDF編集</strong><small> Ver.1.4.68-dev ／図面ごとに編集状態を保持</small></div>
 <div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
 <nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
 <main id="workspace"><div id="empty" class="home-welcome">
