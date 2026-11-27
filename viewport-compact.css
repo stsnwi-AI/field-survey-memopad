@@ -56,3 +56,13 @@
 @media(max-width:1100px){#pageOverview #overviewGrid{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(max-width:700px){#pageOverview #overviewGrid{grid-template-columns:repeat(4,minmax(0,1fr))}#pageOverview .overview-page{min-height:95px}#pageOverview .overview-page canvas{max-height:76px}}
 @media(max-width:420px){#pageOverview #overviewGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Tooltip remains discoverable by touch and keyboard without permanent text. */
+#fixedPageNav #visibleUndo{position:relative}
+#fixedPageNav #visibleUndo:hover::after,#fixedPageNav #visibleUndo:active::after,#fixedPageNav #visibleUndo:focus-visible::after{
+ content:"元に戻す";position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);
+ z-index:1000;display:block;white-space:nowrap;background:#173e52;color:white;
+ border-radius:5px;padding:5px 9px;font:600 12px system-ui;pointer-events:none;box-shadow:0 2px 8px #0004;
+}
+#surveyToolDock.dock-left #dockMode{order:-2}
+#surveyToolDock.dock-left .dock-title{order:-3}
