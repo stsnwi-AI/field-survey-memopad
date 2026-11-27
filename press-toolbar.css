@@ -1,0 +1,90 @@
+/* v1.4.68 - press-title command row, explicitly visible tablet zoom.
+   This stylesheet is UI-only; PDF annotations, save data and photos are unchanged. */
+body>header .brand #quickToolbarTrigger{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ flex:0 0 auto;min-width:150px;min-height:39px;padding:5px 10px;
+ background:#214f66;color:#fff;border:1px solid #84aabd;border-radius:7px;
+ font-size:12px!important;font-weight:750;touch-action:none;cursor:pointer;
+ white-space:nowrap;
+}
+body>header .brand> :not(#quickToolbarTrigger){display:none!important}
+body>header .brand{flex:0 0 auto!important;min-width:0!important;width:auto!important;max-width:none!important}
+body>header{
+ display:flex!important;flex-wrap:nowrap!important;min-height:47px!important;
+ height:47px!important;padding:3px 5px!important;gap:4px!important;
+ align-items:center!important;position:relative!important;overflow:visible!important;
+}
+body>header:not(.quick-toolbar-expanded) > .open,
+body>header:not(.quick-toolbar-expanded) > #multiPDFWorkspace,
+body>header:not(.quick-toolbar-expanded) > #openAnotherPDF,
+body>header:not(.quick-toolbar-expanded) > #save,
+body>header:not(.quick-toolbar-expanded) > #inputMethodToggle,
+body>header:not(.quick-toolbar-expanded) > #showSurveyTools{
+ display:none!important;
+}
+#fixedPageNav{
+ display:flex!important;flex:1 1 auto!important;min-width:0!important;
+ max-width:none!important;justify-content:flex-start!important;
+ overflow:visible!important;gap:4px!important;
+}
+#fixedPageNav .fixed-page-controls{flex:0 0 auto!important;gap:2px!important}
+#fixedPageNav #desktopZoomControls{
+ display:inline-flex!important;visibility:visible!important;opacity:1!important;
+ flex:0 0 auto!important;order:1!important;align-items:center!important;gap:3px!important;
+}
+#fixedPageNav #desktopZoomControls button{
+ display:inline-flex!important;visibility:visible!important;opacity:1!important;
+ align-items:center!important;justify-content:center!important;
+ width:43px!important;min-width:43px!important;max-width:43px!important;
+ height:42px!important;min-height:42px!important;
+ font:800 23px system-ui!important;padding:2px!important;
+}
+#fixedPageNav #desktopZoomControls button:disabled{opacity:.45!important}
+#fixedPageNav #desktopZoomControls output{display:none!important}
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #panDrawing,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #visibleUndo,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #pageOverviewButton,
+body>header:not(.quick-toolbar-expanded) #fixedPageNav > #workspaceAddPDF{
+ display:none!important;
+}
+#fixedPageNav #workspaceAddPDF{
+ order:5!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;min-width:100px!important;max-width:none!important;
+ background:#f0ead6;color:#543b0d;font-size:12px!important;font-weight:750;
+}
+body>header.quick-toolbar-expanded{
+ flex-wrap:wrap!important;height:auto!important;min-height:47px!important;
+ max-height:55dvh!important;overflow-y:auto!important;
+ align-content:flex-start!important;align-items:center!important;
+ padding-bottom:7px!important;z-index:100!important;
+ box-shadow:0 9px 22px #0004!important;
+}
+body>header.quick-toolbar-expanded #fixedPageNav{
+ order:2!important;flex:1 0 100%!important;width:100%!important;
+ flex-wrap:wrap!important;gap:5px!important;justify-content:flex-start!important;
+}
+body>header.quick-toolbar-expanded #fixedPageNav > #panDrawing,
+body>header.quick-toolbar-expanded #fixedPageNav > #visibleUndo,
+body>header.quick-toolbar-expanded #fixedPageNav > #pageOverviewButton,
+body>header.quick-toolbar-expanded #fixedPageNav > #workspaceAddPDF{display:inline-flex!important}
+body>header.quick-toolbar-expanded > .open,
+body>header.quick-toolbar-expanded > #save,
+body>header.quick-toolbar-expanded > #inputMethodToggle,
+body>header.quick-toolbar-expanded > #showSurveyTools{
+ display:inline-flex!important;min-height:42px!important;
+}
+body>header.quick-toolbar-expanded > #multiPDFWorkspace,
+body>header.quick-toolbar-expanded > #openAnotherPDF{display:none!important}
+#zoomHome{display:none!important}
+@media(max-width:1024px),(pointer:coarse){
+ #fixedPageNav #desktopZoomControls{display:flex!important}
+ #fixedPageNav #desktopZoomControls button{display:inline-flex!important}
+ #fixedPageNav #panDrawing{position:static!important;right:auto!important}
+ body>header .brand #quickToolbarTrigger{min-width:132px;font-size:11px!important;padding:5px}
+}
+@media(max-width:600px){
+ body>header .brand #quickToolbarTrigger{min-width:106px;max-width:116px;font-size:10px!important;white-space:normal;line-height:1.1}
+ #fixedPageNav .fixed-page-controls button{min-width:30px!important;max-width:32px!important;padding:1px!important}
+ #fixedPageNav #page{min-width:43px!important;font-size:10px!important}
+ #fixedPageNav #desktopZoomControls button{min-width:37px!important;width:37px!important;max-width:37px!important}
+}
