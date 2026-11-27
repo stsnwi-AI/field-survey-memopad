@@ -26,7 +26,7 @@
   bar.append(zoomHome);
   strip.append(pageControls,move);
   const editablePageStatus=document.createElement('output');editablePageStatus.id='editablePageStatus';editablePageStatus.hidden=true;editablePageStatus.setAttribute('aria-live','polite');editablePageStatus.style.cssText='font:600 11px system-ui,sans-serif;padding:4px 6px;border-radius:5px;background:#e5f3f1;color:#145648;white-space:nowrap;';strip.append(editablePageStatus);editablePageStatus.hidden=true;
-  const visibleUndo=document.createElement('button');visibleUndo.type='button';visibleUndo.id='visibleUndo';visibleUndo.textContent='↶';visibleUndo.title='元に戻す';visibleUndo.setAttribute('aria-label','操作を元に戻す');visibleUndo.onclick=()=>document.getElementById('undo')?.click();strip.append(visibleUndo);
+  const visibleUndo=document.createElement('button');visibleUndo.type='button';visibleUndo.id='visibleUndo';visibleUndo.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" style="width:23px;height:23px;display:block;stroke:currentColor;stroke-width:2.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M9 7 4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10"/></svg>';visibleUndo.title='元に戻す';visibleUndo.setAttribute('aria-label','操作を元に戻す');visibleUndo.onclick=()=>document.getElementById('undo')?.click();strip.append(visibleUndo);
   // Always-visible desktop mouse zoom; share the existing zoom/select render path.
   const desktopZoom=document.createElement('div');
   desktopZoom.id='desktopZoomControls';
