@@ -81,8 +81,19 @@ button:focus-visible,.add:focus-within{outline:3px solid #4aa3d3}
 /* Once a PDF is open, PDF addition is available inside its editor icon row. */
 body:has(.document-frame.active) > header{display:none!important}
 body:has(.document-frame.active) > #workspace{flex:1 1 auto!important;min-height:0!important}
+
+/* v1.4.74: PDF tabs use 27px instead of 42px. Open-PDF editor header is 36px. */
+#tabs{height:27px!important;min-height:27px!important;padding:1px 4px!important;gap:3px!important}
+.tab-wrap{height:25px!important;min-height:25px!important;min-width:100px!important;max-width:220px!important;border-radius:4px!important}
+.tab,.tab-close{min-height:24px!important;height:24px!important;padding:1px 5px!important;font-size:11px!important;border-radius:3px!important}
+.tab-close{min-width:25px!important;font-size:16px!important;line-height:1!important}
+@media(max-width:650px){
+ #tabs{height:27px!important}
+ .tab-wrap{min-width:86px!important;max-width:155px!important}
+ .tab{max-width:125px!important}
+}
 </style></head><body>
-<header><div><strong>現場調査メモパッド｜PDF編集</strong><small> Ver.1.4.73-dev ／図面ごとに編集状態を保持</small></div>
+<header><div><strong>現場調査メモパッド｜PDF編集</strong><small> Ver.1.4.74-dev ／図面ごとに編集状態を保持</small></div>
 <div class="actions"><label class="add" for="addFiles">＋ PDFを追加<input id="addFiles" type="file" accept="application/pdf,.pdf" multiple></label></div></header>
 <nav id="tabs" role="tablist" aria-label="開いているPDF"></nav>
 <main id="workspace"><div id="empty" class="home-welcome">
