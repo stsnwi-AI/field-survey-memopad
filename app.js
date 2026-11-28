@@ -124,7 +124,33 @@ async function render(){if(!doc||rendering)return;rendering=true;try{const p=awa
 async function load(data,name){window.__surveyPdfLoading=true;window.invalidateMobileShare?.();say('PDFを読み込んでいます…');try{const original=new Uint8Array(data).slice();const embedded=await extractEmbeddedProject(original);if(embedded){await restoreProject(embedded);$('filename').textContent=name;await window.surveyPDFLoaded?.(embedded);const total=Object.values(items).reduce((n,a)=>n+a.length,0);say('再編集データを復元：全体'+total+'件。このページ'+list().length+'件。編集できるページを確認してください。');return}const next=await pdfjsLib.getDocument({data:original.slice(),isEvalSupported:false,CMapReaderFactory:BundledCMapReader,cMapPacked:true,standardFontDataUrl:'vendor/standard_fonts/'}).promise;sources=[{bytes:original,doc:next}];pageEntries=Array.from({length:next.numPages},(_,i)=>({id:newPageId(),source:0,index:i+1,rotation:0}));doc=pageFacade();bytes=original;pageChecks.clear();page=1;items={};history=[];redoStack=[];selected=-1;dirty=false;$('filename').textContent=name;$('save').disabled=false;$('newTabStart').hidden=true;await render();if(!$('pagePanel').hidden)await refreshPageGrid();await window.surveyPDFLoaded?.(null);say('再編集データが見つかりません。PDFに焼き付いた以前の文字・線は個別に選択できません。')}catch(e){console.error('Editable PDF load failed:',e);say('PDFの読込・再編集情報の復元に失敗しました：'+e.message+'。元のファイルは変更していません。')}finally{window.__surveyPdfLoading=false}}
 $('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(pageBusy||rendering){say('処理が終わってからPDFを開いてください。');return}if(doc){say('今のPDFは残しています。「別PDF用のタブを開く」で新しいタブを開き、そこでPDFを選んでください。');return}await load(await f.arrayBuffer(),f.name)};
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{if(b.dataset.tool==='image')$('imageFile').click();else setTool(b.dataset.tool)});
-$('imageFile').onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>{imgSource=r.result;const im=imageFor(imgSource);im.onload=()=>{draw();setTool('image');say('PDF上でドラッグして画像の大きさを指定してください。')}};r.readAsDataURL(f)}e.target.value=''};
+$('imageFile').onchange=async e=>{
+ const file=e.target.files?.[0];e.target.value='';
+ if(!file)return;
+ if(!/^image\/(png|jpeg)$/i.test(file.type)&&!/\.(png|jpe?g)$/i.test(file.name)){
+  say('PNGまたはJPEG画像を選んでください。');return;
+ }
+ try{
+  const src=await new Promise((resolve,reject)=>{
+   const reader=new FileReader();
+   reader.onload=()=>resolve(reader.result);
+   reader.onerror=()=>reject(reader.error||new Error('画像ファイルを読み込めません'));
+   reader.readAsDataURL(file);
+  });
+  const im=await new Promise((resolve,reject)=>{
+   const image=imageFor(src);
+   if(image.complete&&image.naturalWidth>0){resolve(image);return}
+   image.addEventListener('load',()=>resolve(image),{once:true});
+   image.addEventListener('error',()=>reject(new Error('画像を展開できません')),{once:true});
+  });
+  if(!im.naturalWidth||!im.naturalHeight)throw new Error('画像サイズを取得できません');
+  imgSource=src;
+  setTool('image');
+  say('画像を読み込みました。図面をクリック・タップで配置、ドラッグで大きさ指定。');
+ }catch(error){
+  say('画像の読み込みに失敗しました：'+error.message);
+ }
+};
 function point(e){const r=canvas.getBoundingClientRect();return unturnPoint({x:(e.clientX-r.left)*canvas.width/r.width/scale,y:(e.clientY-r.top)*canvas.height/r.height/scale},pageEntries[page-1])}
 // v1.4.65: Keep clicks usable at reduced zoom and for tiny saved pen strokes.
 function hitAnnotation(o,p){
@@ -311,6 +337,17 @@ function finish(e){
   }
  }
  if(working&&tool!=='select'){
+  // v1.4.80: A tap/click without dragging places the image at a readable
+  // natural aspect ratio; drag placement preserves existing size behavior.
+  if(working&&tool==='image'&&imgSource&&
+     (Math.abs(working.w)<2||Math.abs(working.h)<2)){
+   const im=imageFor(imgSource);
+   if(im.complete&&im.naturalWidth>0&&im.naturalHeight>0){
+    const width=Math.min(220/Math.max(.25,scale),Math.max(60/Math.max(.25,scale),im.naturalWidth/Math.max(1,scale)));
+    const height=width*im.naturalHeight/im.naturalWidth;
+    working.w=width;working.h=height;
+   }
+  }
   const shape=['rect','ellipse','image'].includes(tool),vector=tool==='arrow';
   const valid=tool==='pen'||tool==='highlight'||shape&&(Math.abs(working.w)>=2&&Math.abs(working.h)>=2)||vector&&Math.hypot(working.w,working.h)>=3;
   if(valid){if(tool==='image'){const b=bounds(working);Object.assign(working,b)}if(tool==='pen'||tool==='highlight')straightenCompletedStroke(working);snapshot();list().push(working)}}working=null;start=null;dragHandle=null;dragGroup=null;snapGuide=null;if(tool==='select')syncEditor();else if(tool==='pen'){selectIndices([]);$('editor').hidden=true;}draw()}canvas.onpointerup=finish;canvas.onpointercancel=finish;
